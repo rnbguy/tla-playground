@@ -87,16 +87,6 @@ export default function Run() {
       <div class="rounded min-w-full min-h-[30rem] p-[1em] overflow-x-auto bg-gray-100">
         {revText}
       </div>
-
-      <link
-        rel="stylesheet"
-        data-name="vs/editor/editor.main"
-        href="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.css"
-      />
-
-      <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js" />
-      <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.nls.js" />
-      <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.js" />
     </div>
   );
 }
