@@ -6,18 +6,13 @@ import {
   GrpcClient,
 } from "https://github.com/rnbguy/deno-grpc/raw/size-overflow-fix/client.ts";
 
-const APALACHE_VERSION = "v0.30.3";
 const GH_REPO = "informalsystems/apalache";
 const JAR_NAME = "apalache.jar";
 
-const CMDEXEC_PROTO_URL =
-  `https://github.com/informalsystems/apalache/raw/${APALACHE_VERSION}/shai/src/main/protobuf/cmdExecutor.proto`;
-
-const CMDEXEC_PROTO = await (await fetch(CMDEXEC_PROTO_URL)).text();
-
-export class ApalacheServer {
+export class Apalache {
   version: string | undefined;
   process: Deno.Process | undefined;
+  client: GrpcClient | undefined;
   async setVersion(version: string) {
     if (version == "latest") {
       version = await this.getLatestVersion();
@@ -29,10 +24,17 @@ export class ApalacheServer {
     const resp = await (await fetch(urlPath)).json();
     return resp.tag_name;
   }
+  getCmdExecutorProtoUrl(): string {
+    return `https://github.com/informalsystems/apalache/raw/${this.version}/shai/src/main/protobuf/cmdExecutor.proto`;
+  }
+
+  async getCmdExecutorProto(): Promise<string> {
+    return await (await fetch(this.getCmdExecutorProtoUrl())).text();
+  }
 
   async getJar() {
     const urlPath =
-      `https://github.com/informalsystems/apalache/releases/download/${APALACHE_VERSION}/apalache.tgz`;
+      `https://github.com/informalsystems/apalache/releases/download/${this.version}/apalache.tgz`;
     const res = await fetch(urlPath);
     const reader = readerFromStreamReader(
       res.body.pipeThrough(new DecompressionStream("gzip")).getReader(),
@@ -59,14 +61,11 @@ export class ApalacheServer {
       this.process.close();
     }
   };
-}
 
-export class ApalacheClient {
-  client: GrpcClient | undefined;
-  constructor() {
+  async setClient() {
     this.client = getClient({
       port: 8822,
-      root: CMDEXEC_PROTO,
+      root: await this.getCmdExecutorProto(),
       serviceName: "shai.cmdExecutor.CmdExecutor",
     });
   }

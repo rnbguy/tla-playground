@@ -10,9 +10,9 @@ import manifest from "./fresh.gen.ts";
 import twindPlugin from "$fresh/plugins/twind.ts";
 import twindConfig from "./twind.config.ts";
 
-import { ApalacheServer } from "./utils/apalache.ts";
+import { Apalache } from "./utils/apalache.ts";
 
-const apalache = new ApalacheServer();
+const apalache = new Apalache();
 await apalache.setVersion("latest");
 await apalache.getJar();
 apalache.spawnServer();
