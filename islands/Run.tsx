@@ -1,7 +1,7 @@
 import { Button } from "../components/Button.tsx";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { computed, signal } from "@preact/signals";
-import { IS_BROWSER } from "$fresh/runtime.ts";
+import { asset, IS_BROWSER } from "$fresh/runtime.ts";
 
 // interface RunProps {
 //   editor: monacoEditor.IStandaloneCodeEditor;
@@ -43,12 +43,29 @@ if (IS_BROWSER) {
   // await import("https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.js");
 }
 
+const EXAMPLE_TLA = `
+---- MODULE hello ----
+EXTENDS Integers
+
+VARIABLE
+    \\* @type: Int;
+    x
+
+Init == x = 0
+
+Next == x' = x + 1 \\/ x' = x + 5
+
+Inv == x < 3
+
+View == x
+
+====
+`;
+
 export default function Run() {
   const editorRef = useRef(null);
   const consoleText = signal("Click run to run..");
-  const revText = computed(() =>
-    consoleText.value.split("").reverse().join("")
-  );
+  const buttonDisabled = signal(false);
 
   let editor = null;
 
@@ -60,14 +77,32 @@ export default function Run() {
 
       if (monaco !== undefined) {
         editor = monaco.editor.create(editorRef.current, {
-          value: ["function x() {", '\tconsole.log("Hello world!");', "}"].join(
-            "\n",
-          ),
+          value: EXAMPLE_TLA.trimStart(),
           language: "javascript",
         });
       }
     }
   });
+
+  const processText = async () => {
+    buttonDisabled.value = true;
+    const txt = editor.getValue();
+    const data = { "body": txt };
+    const resp = await fetch("/api/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    consoleText.value = JSON.stringify(
+      JSON.parse((await resp.json()).resp.failure.data),
+      null,
+      2,
+    );
+    console.log(consoleText.value);
+    buttonDisabled.value = false;
+  };
 
   return (
     <div class="gap-2 w-full place-items-center">
@@ -77,16 +112,15 @@ export default function Run() {
       />
 
       <Button
-        onClick={() => {
-          consoleText.value = editor.getValue();
-        }}
+        disabled={buttonDisabled}
+        onClick={processText}
       >
         Run
       </Button>
 
-      <div class="rounded min-w-full min-h-[30rem] p-[1em] overflow-x-auto bg-gray-100">
-        {revText}
-      </div>
+      <p class="rounded min-w-full min-h-[30rem] p-[1em] overflow-x-auto bg-gray-100 font-mono text-sm whitespace-pre">
+        {consoleText}
+      </p>
     </div>
   );
 }

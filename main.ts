@@ -10,4 +10,13 @@ import manifest from "./fresh.gen.ts";
 import twindPlugin from "$fresh/plugins/twind.ts";
 import twindConfig from "./twind.config.ts";
 
+import { ApalacheServer } from "./utils/apalache.ts";
+
+const apalache = new ApalacheServer();
+await apalache.setVersion("latest");
+await apalache.getJar();
+apalache.spawnServer();
+
 await start(manifest, { plugins: [twindPlugin(twindConfig)] });
+
+apalache.killServer();
