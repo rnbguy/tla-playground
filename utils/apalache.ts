@@ -1,10 +1,7 @@
-import { Untar } from "https://deno.land/std/archive/mod.ts";
-import { readerFromStreamReader } from "https://deno.land/std/streams/mod.ts";
-import { copy } from "https://deno.land/std/streams/copy.ts";
-import {
-  getClient,
-  GrpcClient,
-} from "https://github.com/rnbguy/deno-grpc/raw/size-overflow-fix/client.ts";
+import { Untar } from "$std/archive/mod.ts";
+import { readerFromStreamReader } from "$std/streams/mod.ts";
+import { copy } from "$std/streams/copy.ts";
+import { getClient, GrpcClient } from "grpc_basic/client.ts";
 
 const GH_REPO = "informalsystems/apalache";
 const JAR_NAME = "apalache.jar";

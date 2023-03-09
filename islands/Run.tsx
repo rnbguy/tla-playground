@@ -1,7 +1,7 @@
 import { Button } from "../components/Button.tsx";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { computed, signal } from "@preact/signals";
-import { asset, IS_BROWSER } from "$fresh/runtime.ts";
+import { useEffect, useRef } from "preact/hooks";
+import { signal } from "@preact/signals";
+import { IS_BROWSER } from "$fresh/runtime.ts";
 
 // interface RunProps {
 //   editor: monacoEditor.IStandaloneCodeEditor;
