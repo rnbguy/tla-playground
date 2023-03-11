@@ -2,6 +2,7 @@ import { Untar } from "$std/archive/mod.ts";
 import { readerFromStreamReader } from "$std/streams/mod.ts";
 import { copy } from "$std/streams/copy.ts";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
+import { cache } from "cache/mod.ts";
 
 const GH_REPO = "informalsystems/apalache";
 const JAR_NAME = "apalache.jar";
@@ -14,7 +15,7 @@ export class Apalache {
     if (version == "latest") {
       version = await this.getLatestVersion();
     }
-    this.version = version;
+    this.version = version.replace(/^v/, "");
   }
   async getLatestVersion(): Promise<string> {
     const urlPath = `https://api.github.com/repos/${GH_REPO}/releases/latest`;
@@ -22,19 +23,21 @@ export class Apalache {
     return resp.tag_name;
   }
   getCmdExecutorProtoUrl(): string {
-    return `https://github.com/informalsystems/apalache/raw/${this.version}/shai/src/main/protobuf/cmdExecutor.proto`;
+    return `https://github.com/informalsystems/apalache/raw/v${this.version}/shai/src/main/protobuf/cmdExecutor.proto`;
   }
 
   async getCmdExecutorProto(): Promise<string> {
-    return await (await fetch(this.getCmdExecutorProtoUrl())).text();
+    const protoFile = await cache(this.getCmdExecutorProtoUrl());
+    return Deno.readTextFileSync(protoFile.path);
   }
 
   async getJar() {
     const urlPath =
-      `https://github.com/informalsystems/apalache/releases/download/${this.version}/apalache.tgz`;
-    const res = await fetch(urlPath);
+      `https://github.com/informalsystems/apalache/releases/download/v${this.version}/apalache-${this.version}.tgz`;
+    const tgzFile = await cache(urlPath);
+    const file = await Deno.open(tgzFile.path);
     const reader = readerFromStreamReader(
-      res.body.pipeThrough(new DecompressionStream("gzip")).getReader(),
+      file.readable.pipeThrough(new DecompressionStream("gzip")).getReader(),
     );
     const untar = new Untar(reader);
 
