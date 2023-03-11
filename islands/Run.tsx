@@ -7,6 +7,10 @@ import { IS_BROWSER } from "$fresh/runtime.ts";
 //   editor: monacoEditor.IStandaloneCodeEditor;
 // }
 
+interface RunProps {
+  snippetId: string | null;
+}
+
 // function createEditor() {
 //   const el = window.document.getElementById(monacoId);
 //   const editor = monacoEditor.create(el as HTMLElement, {
@@ -62,7 +66,7 @@ View == x
 ====
 `;
 
-export default function Run() {
+export default function Run(props: RunProps) {
   const editorRef = useRef(null);
   const consoleText = signal("Click run to run..");
   const buttonDisabled = signal(false);
@@ -77,10 +81,19 @@ export default function Run() {
 
       if (monaco !== undefined) {
         editor = monaco.editor.create(editorRef.current, {
-          value: EXAMPLE_TLA.trimStart(),
           language: "javascript",
         });
       }
+    }
+
+    if (props.snippetId) {
+      fetch(`https://api.github.com/gists/${props.snippetId}`)
+        .then((value) => value.json())
+        .then((json) => {
+          editor.setValue(Object.values(json.files)[0].content);
+        });
+    } else {
+      editor.setValue(EXAMPLE_TLA.trimStart());
     }
   });
 

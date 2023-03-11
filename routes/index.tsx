@@ -4,7 +4,7 @@ import { PageProps, RouteConfig } from "$fresh/server.ts";
 // https://paste.ubuntu.ir
 // http://ix.io
 // https://bpa.st
-// https://ptpb.pw
+// http://ptpb.pw
 
 export const config: RouteConfig = {
   routeOverride: "/*",

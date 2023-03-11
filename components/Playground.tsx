@@ -23,7 +23,7 @@ export default function Playground(props: PlaygroundProps) {
         <div class="mx-auto w-64 p-4 rounded shadow font-mono text-center">
           Snippet #{props.snippetId}
         </div>
-        <Run />
+        <Run snippetId={props.snippetId} />
       </body>
     </html>
   );
