@@ -5,26 +5,40 @@ import GithubIcon from "icons/brand-github.tsx";
 import IconMountain from "icons/mountain.tsx";
 
 const EXAMPLE_TLA = {
-  tla: `---- MODULE playground ----
+  tla: `
+---- MODULE playground ----
 EXTENDS Integers
 
-\\*  Collatz Conjecture
+\\* Collatz Conjecture
 
 VARIABLES
+    \\* state of number
     \\* @type: Int;
     number,
+    \\* remaining steps
     \\* @type: Int;
-    maxSteps
+    steps
 
 
-Init == number \\in Nat /\\ maxSteps = 7
+Init ==
+    /\\ number \\in Nat
+    \\* first assign is odd
+    /\\ number % 2 = 1
+    \\* number of exact steps
+    /\\ steps = 10
 
 Next ==
+  \\* previous number can not be 1
+  /\\ number /= 1
+  \\* collatz step
   /\\ IF (number % 2 = 0) THEN (number' = number \\div 2) ELSE (number' = number * 3 + 1)
-  /\\ maxSteps' = maxSteps - 1
+  \\* decrement current number of steps
+  /\\ steps' = steps - 1
 
-CounterExampleProperty == number = 1 /\\ maxSteps = 1
+\\* Property of last state
+CounterExampleProperty == number = 1 /\\ steps = 1
 
+\\* Wrapped invariant
 Invariant == ~CounterExampleProperty
 
 ====
