@@ -79,7 +79,7 @@ export class Apalache {
 
   async setClient() {
     this.client = getClient({
-      port: 8822,
+      port: APALACHE_PORT_ID,
       root: await this.getCmdExecutorProto(),
       serviceName: "shai.cmdExecutor.CmdExecutor",
     });
