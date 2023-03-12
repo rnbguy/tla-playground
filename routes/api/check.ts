@@ -4,13 +4,12 @@ import { Apalache } from "../../utils/apalache.ts";
 export const handler = {
   async POST(req: Request, _ctx: HandlerContext): Promise<Response> {
     const jsonData = await req.json();
-    const codeText = jsonData.body;
 
     const apalache = new Apalache();
-    await apalache.setVersion("latest");
+    await apalache.setVersion("0.30.5");
     await apalache.setClient();
-    const respJson = await apalache.check(codeText);
+    const respJson = await apalache.modelCheck(jsonData.tla, jsonData.inv);
 
-    return Response.json({ "resp": respJson, "req": jsonData });
+    return Response.json({ "resp": respJson });
   },
 };

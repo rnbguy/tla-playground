@@ -1,11 +1,7 @@
 import { Head } from "$fresh/runtime.ts";
-import Run from "../islands/Run.tsx";
+import PlaygroundBody from "../islands/PlaygroundBody.tsx";
 
-interface PlaygroundProps {
-  snippetId: string | null;
-}
-
-export default function Playground(props: PlaygroundProps) {
+export default function Playground() {
   return (
     <html>
       <Head>
@@ -20,10 +16,7 @@ export default function Playground(props: PlaygroundProps) {
         <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.js" />
       </Head>
       <body>
-        <div class="mx-auto w-64 p-4 rounded shadow font-mono text-center">
-          Snippet #{props.snippetId}
-        </div>
-        <Run snippetId={props.snippetId} />
+        <PlaygroundBody />
       </body>
     </html>
   );

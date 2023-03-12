@@ -13,7 +13,7 @@ import twindConfig from "./twind.config.ts";
 import { Apalache } from "./utils/apalache.ts";
 
 const apalache = new Apalache();
-await apalache.setVersion("latest");
+await apalache.setVersion("0.30.5");
 await apalache.getJar();
 apalache.spawnServer();
 

@@ -5,7 +5,7 @@ import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
 
 const GH_REPO = "informalsystems/apalache";
-const JAR_NAME = "apalache.jar";
+const TGZ_JAR_NAME = "apalache.jar";
 
 export class Apalache {
   version: string | undefined;
@@ -31,6 +31,10 @@ export class Apalache {
     return Deno.readTextFileSync(protoFile.path);
   }
 
+  getJarName(): string {
+    return `apalache-${this.version}.jar`;
+  }
+
   async getJar() {
     const urlPath =
       `https://github.com/informalsystems/apalache/releases/download/v${this.version}/apalache-${this.version}.tgz`;
@@ -42,8 +46,11 @@ export class Apalache {
     const untar = new Untar(reader);
 
     for await (const entry of untar) {
-      if (entry.type === "file" && entry.fileName.endsWith(JAR_NAME)) {
-        const file = await Deno.open(JAR_NAME, { create: true, write: true });
+      if (entry.type === "file" && entry.fileName.endsWith(TGZ_JAR_NAME)) {
+        const file = await Deno.open(this.getJarName(), {
+          create: true,
+          write: true,
+        });
         await copy(entry, file);
         file.close();
         break;
@@ -52,7 +59,7 @@ export class Apalache {
   }
   spawnServer = () => {
     this.process = Deno.run({
-      cmd: ["java", "-jar", JAR_NAME, "server"],
+      cmd: ["java", "-jar", this.getJarName(), "server"],
     });
   };
   killServer = () => {
@@ -70,25 +77,45 @@ export class Apalache {
     });
   }
 
-  async check(tlaContent: string): Promise<any> {
+  async modelCheck(tla: string, inv: string): Promise<any> {
     const config = {
       input: {
         source: {
           type: "string",
-          content: tlaContent,
+          content: tla,
+          aux: [],
+          format: "tla",
+        },
+      },
+      checker: { inv: [inv] },
+    };
+
+    const cmd = {
+      cmd: this.client.svc.lookup("Cmd").values.CHECK,
+      config: JSON.stringify(config),
+    };
+    const resp = await this.client.run(cmd);
+    return resp;
+  }
+
+  async modelSimulate(tla: string): Promise<any> {
+    const config = {
+      input: {
+        source: {
+          type: "string",
+          content: tla,
           aux: [],
           format: "tla",
         },
       },
       checker: {
-        inv: ["Inv"],
-        "max-error": 3,
-        view: "View",
+        max_run: 5,
+        output_traces: true,
       },
     };
 
     const cmd = {
-      cmd: this.client.svc.lookup("Cmd").values.CHECK,
+      cmd: this.client.svc.lookup("Cmd").values.SIMULATE,
       config: JSON.stringify(config),
     };
     const resp = await this.client.run(cmd);
