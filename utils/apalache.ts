@@ -87,7 +87,10 @@ export class Apalache {
           format: "tla",
         },
       },
-      checker: { inv: [inv] },
+      checker: {
+        inv: [inv],
+        tuning: { "search.smt.timeout": 3 },
+      },
     };
 
     const cmd = {

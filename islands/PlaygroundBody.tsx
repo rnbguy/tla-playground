@@ -4,8 +4,8 @@ import LemonIcon from "icons/lemon-2.tsx";
 import GithubIcon from "icons/brand-github.tsx";
 import IconMountain from "icons/mountain.tsx";
 
-const EXAMPLE_TLA = `
----- MODULE playground ----
+const EXAMPLE_TLA = {
+  tla: `---- MODULE playground ----
 EXTENDS Integers
 
 VARIABLES
@@ -24,7 +24,14 @@ Next ==
 Invariant == x + y < 10
 
 ====
-`;
+`,
+  inv: "Invariant",
+};
+
+let INIT_TLA = JSON.parse(localStorage.getItem("tla-snippet")) ?? EXAMPLE_TLA;
+if (INIT_TLA.tla.length === 0) {
+  INIT_TLA = EXAMPLE_TLA;
+}
 
 export default function PlaygroundBody() {
   const editorRef = useRef(null);
@@ -73,42 +80,48 @@ export default function PlaygroundBody() {
         .catch((error) => {
           console.error(error);
           window.location.hash = "";
-          editor.setValue(EXAMPLE_TLA.trimStart());
+          editor.setValue(INIT_TLA.tla.trimStart());
+          invInputRef.current.value = INIT_TLA.inv;
         });
     } else {
-      editor.setValue(EXAMPLE_TLA.trimStart());
+      editor.setValue(INIT_TLA.tla.trimStart());
+      invInputRef.current.value = INIT_TLA.inv;
     }
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      processText,
+    );
   });
 
-  const processText = async () => {
-    processing.value = true;
-    const data = { tla: editor.getValue(), inv: invInputRef.current.value };
-    const resp = await fetch("/api/check", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    const respJson = await resp.json();
-    if (respJson.resp.failure) {
-      const parsedJson = JSON.parse(respJson.resp.failure.data);
-      if (parsedJson.msg) {
-        consoleText.value = parsedJson.msg;
-      } else {
-        consoleText.value = JSON.stringify(
-          parsedJson.error_data.counterexamples[0].states.map((e) => {
-            delete e["#meta"];
-            return e;
-          }),
-          null,
-          2,
-        );
-      }
-    } else {
-      consoleText.value = "Verified upto 10 steps";
+  setInterval(() => {
+    if (editor) {
+      localStorage.setItem(
+        "tla-snippet",
+        JSON.stringify({
+          tla: editor.getValue(),
+          inv: invInputRef.current.value,
+        }),
+      );
     }
-    processing.value = false;
+  }, 2000);
+
+  const processText = async () => {
+    if (!emptyInv.value && !processing.value) {
+      processing.value = true;
+      const data = { tla: editor.getValue(), inv: invInputRef.current.value };
+      const resp = await fetch("/api/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const respJson = await resp.json();
+
+      consoleText.value = JSON.stringify(respJson, null, 2);
+
+      processing.value = false;
+    }
   };
 
   const updateInv = (e) => {
@@ -123,7 +136,6 @@ export default function PlaygroundBody() {
           class="rounded py-1 px-4 text-gray-700 ring-1 ring-gray-200 active:ring-2 active:ring-gray-500"
           type="text"
           placeholder="Invariant"
-          value="Invariant"
           onChange={updateInv}
           onInput={updateInv}
           disabled={processing}
