@@ -13,7 +13,7 @@ export const handler = {
     const respJson = await apalache.modelCheck(
       jsonData.tla,
       jsonData.inv,
-      bmcLength,
+      bmcLength - 1,
     );
 
     let outJson: { [k: string]: any } = {};
