@@ -53,26 +53,24 @@ export default function PlaygroundBody() {
       paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
     });
 
-    if (monaco !== undefined) {
-      editor = monaco.editor.create(editorRef.current, {
-        language: null,
-        readOnly: false,
-        automaticLayout: true,
-        contextmenu: true,
-        fontSize: 14,
-        lineHeight: 18,
-        lineNumbersMinChars: 2,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        smoothScrolling: true,
-        scrollbar: {
-          useShadows: false,
-          verticalScrollbarSize: 10,
-          horizontalScrollbarSize: 10,
-        },
-        overviewRulerLanes: 0,
-      });
-    }
+    editor = monaco.editor.create(editorRef.current, {
+      language: null,
+      readOnly: false,
+      automaticLayout: true,
+      contextmenu: true,
+      fontSize: 14,
+      lineHeight: 18,
+      lineNumbersMinChars: 2,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      smoothScrolling: true,
+      scrollbar: {
+        useShadows: false,
+        verticalScrollbarSize: 10,
+        horizontalScrollbarSize: 10,
+      },
+      overviewRulerLanes: 0,
+    });
 
     if (window.location.hash) {
       const gistId = window.location.hash.substring(1);
@@ -179,7 +177,7 @@ export default function PlaygroundBody() {
           <div class="pl-2">
             <a
               class="flex flex-row hover:(opacity-70)"
-              href="https://github.com/rnbguy/fresh_playground"
+              href="https://github.com/rnbguy/fresh-playground"
               rel="noopener noreferrer"
               target="_blank"
             >
