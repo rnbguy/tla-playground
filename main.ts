@@ -12,11 +12,18 @@ import twindConfig from "./twind.config.ts";
 
 import { Apalache } from "./utils/apalache.ts";
 
+import "$std/dotenv/load.ts";
+
+const FRESH_PORT_ID = Deno.env.get("FRESH_SERVER_PORT") ?? 8822;
+
 const apalache = new Apalache();
 await apalache.setVersion("0.30.5");
 await apalache.getJar();
 apalache.spawnServer();
 
-await start(manifest, { plugins: [twindPlugin(twindConfig)] });
+await start(manifest, {
+  plugins: [twindPlugin(twindConfig)],
+  port: FRESH_PORT_ID,
+});
 
 apalache.killServer();

@@ -3,9 +3,11 @@ import { readerFromStreamReader } from "$std/streams/mod.ts";
 import { copy } from "$std/streams/copy.ts";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
+import "$std/dotenv/load.ts";
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";
+const APALACHE_PORT_ID = Deno.env.get("APALACHE_SERVER_PORT") ?? 8822;
 
 export class Apalache {
   version: string | undefined;
@@ -59,7 +61,13 @@ export class Apalache {
   }
   spawnServer = () => {
     this.process = Deno.run({
-      cmd: ["java", "-jar", this.getJarName(), "server"],
+      cmd: [
+        "java",
+        "-jar",
+        this.getJarName(),
+        "server",
+        `--port=${APALACHE_PORT_ID}`,
+      ],
     });
   };
   killServer = () => {
@@ -77,7 +85,7 @@ export class Apalache {
     });
   }
 
-  async modelCheck(tla: string, inv: string): Promise<any> {
+  async modelCheck(tla: string, inv: string, length: number): Promise<any> {
     const config = {
       input: {
         source: {
@@ -89,6 +97,7 @@ export class Apalache {
       },
       checker: {
         inv: [inv],
+        length,
         tuning: { "search.smt.timeout": 3 },
       },
     };

@@ -109,7 +109,7 @@ export default function PlaygroundBody() {
     if (!emptyInv.value && !processing.value) {
       processing.value = true;
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
-      const resp = await fetch("/api/check", {
+      const resp = await fetch("/api", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -145,7 +145,7 @@ export default function PlaygroundBody() {
           onClick={processText}
           disabled={emptyInv || processing}
         >
-          Check
+          Verify
         </button>
         <div class="flex-grow"></div>
 
