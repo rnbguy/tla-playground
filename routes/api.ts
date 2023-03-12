@@ -5,7 +5,7 @@ export const handler = {
   async POST(req: Request, _ctx: HandlerContext): Promise<Response> {
     const jsonData = await req.json();
 
-    const bmcLength = 5;
+    const bmcLength = 10;
 
     const apalache = new Apalache();
     await apalache.setVersion("0.30.5");

@@ -8,20 +8,24 @@ const EXAMPLE_TLA = {
   tla: `---- MODULE playground ----
 EXTENDS Integers
 
+\\*  Collatz Conjecture
+
 VARIABLES
     \\* @type: Int;
-    x,
+    number,
     \\* @type: Int;
-    y
+    maxSteps
 
 
-Init == x = 0 /\\ y = 0
+Init == number \\in Nat /\\ maxSteps = 7
 
 Next ==
-  \\/ x' = x + 1 /\\ y' = y + 2
-  \\/ x' = x + 2 /\\ y' = y + 1
+  /\\ IF (number % 2 = 0) THEN (number' = number \\div 2) ELSE (number' = number * 3 + 1)
+  /\\ maxSteps' = maxSteps - 1
 
-Invariant == x + y < 10
+CounterExampleProperty == number = 1 /\\ maxSteps = 1
+
+Invariant == ~CounterExampleProperty
 
 ====
 `,
