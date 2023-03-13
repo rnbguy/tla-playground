@@ -11,11 +11,6 @@ interface PlaygroundProps {
 }
 
 export default function PlaygroundBody(props: PlaygroundProps) {
-  let initTla = JSON.parse(localStorage.getItem("tla-snippet")) ?? props;
-  if (initTla.tla.length === 0) {
-    initTla = props;
-  }
-
   const editorRef = useRef(null);
   const invInputRef = useRef(null);
 
@@ -27,6 +22,11 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   let editor = null;
 
   useEffect(() => {
+    let initTla = JSON.parse(localStorage.getItem("tla-snippet")) ?? props;
+    if (initTla.tla.length === 0) {
+      initTla = props;
+    }
+
     require.config({
       paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
     });
@@ -71,10 +71,8 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
       processText,
     );
-  });
 
-  setInterval(() => {
-    if (editor) {
+    setInterval(() => {
       localStorage.setItem(
         "tla-snippet",
         JSON.stringify({
@@ -82,8 +80,8 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           inv: invInputRef.current.value,
         }),
       );
-    }
-  }, 2000);
+    }, 2000);
+  });
 
   const processText = async () => {
     if (!emptyInv.value && !processing.value) {
@@ -98,7 +96,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       });
       const respJson = await resp.json();
 
-      consoleText.value = yaml.stringify(respJson, null, 2);
+      consoleText.value = yaml.stringify(respJson, { indent: 2 });
 
       processing.value = false;
     }
