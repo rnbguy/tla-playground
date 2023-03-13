@@ -98,7 +98,10 @@ export class Apalache {
       checker: {
         inv: [inv],
         length,
-        tuning: { "search.smt.timeout": 3 },
+        tuning: {
+          "search.smt.timeout": 3,
+          "smt.randomSeed": Math.floor(Math.random() * 0xffffff),
+        },
       },
     };
 

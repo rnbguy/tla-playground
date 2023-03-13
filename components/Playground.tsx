@@ -1,11 +1,16 @@
 import { Head } from "$fresh/runtime.ts";
 import PlaygroundBody from "../islands/PlaygroundBody.tsx";
 
-export default function Playground() {
+interface PlaygroundProps {
+  tla: string;
+  inv: string;
+}
+
+export default function Playground(props: PlaygroundProps) {
   return (
     <html>
       <Head>
-        <title>Playground - built with Fresh</title>
+        <title>TLA+ Playground - built with Fresh</title>
         <link
           rel="stylesheet"
           data-name="vs/editor/editor.main"
@@ -16,7 +21,7 @@ export default function Playground() {
         <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.js" />
       </Head>
       <body>
-        <PlaygroundBody />
+        <PlaygroundBody {...props} />
       </body>
     </html>
   );

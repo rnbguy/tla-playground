@@ -3,55 +3,19 @@ import { signal } from "@preact/signals";
 import LemonIcon from "icons/lemon-2.tsx";
 import GithubIcon from "icons/brand-github.tsx";
 import IconMountain from "icons/mountain.tsx";
+import * as yaml from "$std/encoding/yaml.ts";
 
-const EXAMPLE_TLA = {
-  tla: `
----- MODULE playground ----
-EXTENDS Integers
-
-\\* Collatz Conjecture
-
-VARIABLES
-    \\* state of number
-    \\* @type: Int;
-    number,
-    \\* remaining steps
-    \\* @type: Int;
-    steps
-
-
-Init ==
-    /\\ number \\in Nat
-    \\* first assign is odd
-    /\\ number % 2 = 1
-    \\* number of exact steps
-    /\\ steps = 10
-
-Next ==
-  \\* previous number can not be 1
-  /\\ number /= 1
-  \\* collatz step
-  /\\ IF (number % 2 = 0) THEN (number' = number \\div 2) ELSE (number' = number * 3 + 1)
-  \\* decrement current number of steps
-  /\\ steps' = steps - 1
-
-\\* Property of last state
-CounterExampleProperty == number = 1 /\\ steps = 1
-
-\\* Wrapped invariant
-Invariant == ~CounterExampleProperty
-
-====
-`,
-  inv: "Invariant",
-};
-
-let INIT_TLA = JSON.parse(localStorage.getItem("tla-snippet")) ?? EXAMPLE_TLA;
-if (INIT_TLA.tla.length === 0) {
-  INIT_TLA = EXAMPLE_TLA;
+interface PlaygroundProps {
+  tla: string;
+  inv: string;
 }
 
-export default function PlaygroundBody() {
+export default function PlaygroundBody(props: PlaygroundProps) {
+  let initTla = JSON.parse(localStorage.getItem("tla-snippet")) ?? props;
+  if (initTla.tla.length === 0) {
+    initTla = props;
+  }
+
   const editorRef = useRef(null);
   const invInputRef = useRef(null);
 
@@ -96,12 +60,12 @@ export default function PlaygroundBody() {
         .catch((error) => {
           console.error(error);
           window.location.hash = "";
-          editor.setValue(INIT_TLA.tla.trimStart());
-          invInputRef.current.value = INIT_TLA.inv;
+          editor.setValue(initTla.tla.trimStart());
+          invInputRef.current.value = initTla.inv;
         });
     } else {
-      editor.setValue(INIT_TLA.tla.trimStart());
-      invInputRef.current.value = INIT_TLA.inv;
+      editor.setValue(initTla.tla.trimStart());
+      invInputRef.current.value = initTla.inv;
     }
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
@@ -134,7 +98,7 @@ export default function PlaygroundBody() {
       });
       const respJson = await resp.json();
 
-      consoleText.value = JSON.stringify(respJson, null, 2);
+      consoleText.value = yaml.stringify(respJson, null, 2);
 
       processing.value = false;
     }
