@@ -10,7 +10,7 @@ ADD . .
 
 RUN cp .env.example .env
 
-RUN deno cache main.ts --import-map=import_map.json
+ONBUILD RUN deno cache main.ts --import-map=import_map.json
 
 EXPOSE 8000
 
