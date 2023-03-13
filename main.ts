@@ -12,29 +12,30 @@ import twindConfig from "./twind.config.ts";
 
 import { Apalache } from "./utils/apalache.ts";
 
-import { load } from "$std/dotenv/mod.ts";
+import { loadSync } from "$std/dotenv/mod.ts";
 
-await load({export: true, allowEmptyValues: true})
+const config = loadSync({ allowEmptyValues: true });
 
-const FRESH_PORT_ID = parseInt(Deno.env.get("FRESH_SERVER_PORT") || "8000");
+const FRESH_PORT_ID = parseInt(config["FRESH_SERVER_PORT"] || "8000");
 
 const apalache = new Apalache();
 await apalache.setVersion("0.30.5");
 await apalache.getJar();
 apalache.spawnServer();
 
-const keyFile = Deno.env.get("KEY_FILE");
-const certFile = Deno.env.get("CERT_FILE");
+const keyFile = config["KEY_FILE"];
+const certFile = config["CERT_FILE"];
 
 if (keyFile && certFile) {
+  console.log("Starting with TLS");
   await startTls(manifest, {
     plugins: [twindPlugin(twindConfig)],
     port: FRESH_PORT_ID,
     keyFile,
     certFile,
   });
-  console.log(keyFile, certFile)
 } else {
+  console.log("Starting without TLS");
   await start(manifest, {
     plugins: [twindPlugin(twindConfig)],
     port: FRESH_PORT_ID,

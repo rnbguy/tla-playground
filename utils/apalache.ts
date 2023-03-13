@@ -3,10 +3,13 @@ import { readerFromStreamReader } from "$std/streams/mod.ts";
 import { copy } from "$std/streams/copy.ts";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
+import { loadSync } from "$std/dotenv/mod.ts";
+
+const config = loadSync({ allowEmptyValues: true });
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";
-const APALACHE_PORT_ID = Deno.env.get("APALACHE_SERVER_PORT") || "8822";
+const APALACHE_PORT_ID = config["APALACHE_SERVER_PORT"] || "8822";
 
 export class Apalache {
   version: string | undefined;
