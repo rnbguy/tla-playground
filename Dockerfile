@@ -1,12 +1,12 @@
 FROM archlinux
 
-RUN pacman -Syu git --needed --noconfirm
+RUN pacman -Syu deno jre-openjdk-headless vim zellij --needed --noconfirm
 
-RUN git clone https://github.com/rnbguy/fresh-playground
+RUN mkdir /fresh-playground
 
 WORKDIR /fresh-playground
 
-RUN pacman -Syu deno jre-openjdk-headless --needed --noconfirm
+ADD . .
 
 RUN cp .env.example .env
 
