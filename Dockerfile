@@ -12,6 +12,8 @@ RUN cp .env.example .env
 
 ONBUILD RUN deno cache main.ts --import-map=import_map.json
 
+RUN mkdir certs
+
 EXPOSE 8000
 
 CMD deno run -A --watch=static/,routes/,certs/ main.ts
