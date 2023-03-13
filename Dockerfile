@@ -8,7 +8,12 @@ WORKDIR /fresh-playground
 
 RUN pacman -Syu deno jre-openjdk-headless --needed --noconfirm
 
+RUN cp .env.example .env
+
+RUN deno cache main.ts --import-map=import_map.json
+
+EXPOSE 8000
 
 CMD deno run --allow-env --allow-read --allow-write --allow-net --allow-run main.ts
 
-# docker run -it --rm -p 8000:8000 "${IMAGE_ID}"
+# docker run -p 8000:8000 ghcr.io/rnbguy/fresh-playground:main
