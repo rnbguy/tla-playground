@@ -14,6 +14,6 @@ RUN deno cache main.ts --import-map=import_map.json
 
 EXPOSE 8000
 
-CMD deno run --allow-env --allow-read --allow-write --allow-net --allow-run main.ts
+CMD deno run -A --watch=static/,routes/,certs/ main.ts
 
 # docker run -p 8000:8000 ghcr.io/rnbguy/fresh-playground:main
