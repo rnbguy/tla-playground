@@ -31,8 +31,7 @@ export class Apalache {
   }
 
   async getCmdExecutorProto(): Promise<string> {
-    const protoFile = await cache(this.getCmdExecutorProtoUrl());
-    return Deno.readTextFileSync(protoFile.path);
+    return await (await fetch(this.getCmdExecutorProtoUrl())).text();
   }
 
   getJarName(): string {
