@@ -53,40 +53,40 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           },
           overviewRulerLanes: 0,
         });
-      },
-    );
 
-    if (window.location.hash) {
-      const gistId = window.location.hash.substring(1);
-      fetch(`https://api.github.com/gists/${gistId}`)
-        .then((value) => value.json())
-        .then((json) => {
-          editor.setValue(Object.values(json.files)[0].content);
-        })
-        .catch((error) => {
-          console.error(error);
-          window.location.hash = "";
+        if (window.location.hash) {
+          const gistId = window.location.hash.substring(1);
+          fetch(`https://api.github.com/gists/${gistId}`)
+            .then((value) => value.json())
+            .then((json) => {
+              editor.setValue(Object.values(json.files)[0].content);
+            })
+            .catch((error) => {
+              console.error(error);
+              window.location.hash = "";
+              editor.setValue(initTla.tla.trimStart());
+              invInputRef.current.value = initTla.inv;
+            });
+        } else {
           editor.setValue(initTla.tla.trimStart());
           invInputRef.current.value = initTla.inv;
-        });
-    } else {
-      editor.setValue(initTla.tla.trimStart());
-      invInputRef.current.value = initTla.inv;
-    }
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      processText,
-    );
+        }
+        editor.addCommand(
+          monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+          processText,
+        );
 
-    setInterval(() => {
-      localStorage.setItem(
-        "tla-snippet",
-        JSON.stringify({
-          tla: editor.getValue(),
-          inv: invInputRef.current.value,
-        }),
-      );
-    }, 2000);
+        setInterval(() => {
+          localStorage.setItem(
+            "tla-snippet",
+            JSON.stringify({
+              tla: editor.getValue(),
+              inv: invInputRef.current.value,
+            }),
+          );
+        }, 2000);
+      },
+    );
   });
 
   const processText = async () => {
