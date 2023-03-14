@@ -14,7 +14,6 @@ VARIABLES
     \\* @type: Int;
     steps
 
-
 Init ==
     /\\ number \\in Nat
     \\* first assign is odd
@@ -37,7 +36,6 @@ CounterExampleProperty == number = 1 /\\ steps = 1
 Invariant == ~CounterExampleProperty
 
 ====
-
 `;
 
 export default function Body() {

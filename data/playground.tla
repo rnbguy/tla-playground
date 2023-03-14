@@ -11,7 +11,6 @@ VARIABLES
     \* @type: Int;
     steps
 
-
 Init ==
     /\ number \in Nat
     \* first assign is odd
