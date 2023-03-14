@@ -32,26 +32,29 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
     });
 
-    require(["vs/editor/editor.main"], function () {
-      editor = monaco.editor.create(editorRef.current, {
-        language: null,
-        readOnly: false,
-        automaticLayout: true,
-        contextmenu: true,
-        fontSize: 14,
-        lineHeight: 18,
-        lineNumbersMinChars: 2,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        smoothScrolling: true,
-        scrollbar: {
-          useShadows: false,
-          verticalScrollbarSize: 10,
-          horizontalScrollbarSize: 10,
-        },
-        overviewRulerLanes: 0,
-      });
-    });
+    require(
+      ["vs/editor/editor.main", "vs/editor/editor.main.nls"],
+      function (monaco) {
+        editor = monaco.editor.create(editorRef.current, {
+          language: null,
+          readOnly: false,
+          automaticLayout: true,
+          contextmenu: true,
+          fontSize: 14,
+          lineHeight: 18,
+          lineNumbersMinChars: 2,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          scrollbar: {
+            useShadows: false,
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+          },
+          overviewRulerLanes: 0,
+        });
+      },
+    );
 
     if (window.location.hash) {
       const gistId = window.location.hash.substring(1);
