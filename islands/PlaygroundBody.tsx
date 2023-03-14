@@ -109,7 +109,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   };
 
   const updateInv = (e) => {
-    emptyInv.value = e.target.value ? false : true;
+    emptyInv.value = !e.target.value;
   };
 
   return (
