@@ -3,9 +3,8 @@ import { readerFromStreamReader } from "$std/streams/mod.ts";
 import { copy } from "$std/streams/copy.ts";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
-import { loadSync } from "$std/dotenv/mod.ts";
 
-const config = loadSync({ allowEmptyValues: true });
+const config = Deno.env.toObject();
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";

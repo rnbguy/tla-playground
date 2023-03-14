@@ -1,8 +1,7 @@
 import { HandlerContext } from "$fresh/server.ts";
 import { Apalache } from "../utils/apalache.ts";
-import { loadSync } from "$std/dotenv/mod.ts";
 
-const config = loadSync({ allowEmptyValues: true });
+const config = Deno.env.toObject();
 
 export const handler = {
   async POST(req: Request, _ctx: HandlerContext): Promise<Response> {

@@ -10,9 +10,7 @@ import manifest from "./fresh.gen.ts";
 import twindPlugin from "$fresh/plugins/twind.ts";
 import twindConfig from "./twind.config.ts";
 
-import { loadSync } from "$std/dotenv/mod.ts";
-
-const config = loadSync({ allowEmptyValues: true });
+const config = Deno.env.toObject();
 
 const FRESH_PORT_ID = parseInt(config["FRESH_SERVER_PORT"] || "8000");
 
