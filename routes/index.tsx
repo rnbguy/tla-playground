@@ -42,6 +42,7 @@ export default function Body() {
   const exampleTla = {
     tla: EXAMPLE_TLA,
     inv: "Invariant",
+    out: "> TLA+ Playground with Apalache",
   };
 
   return <Playground {...exampleTla} />;

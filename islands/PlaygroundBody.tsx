@@ -8,13 +8,14 @@ import * as yaml from "$std/encoding/yaml.ts";
 interface PlaygroundProps {
   tla: string;
   inv: string;
+  out: string;
 }
 
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef(null);
   const invInputRef = useRef(null);
 
-  const consoleText = signal("TLA+ Playground");
+  const consoleText = signal(null);
 
   const emptyInv = signal(false);
   const processing = signal(false);
@@ -27,6 +28,8 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     if (initTla.tla.length === 0) {
       initTla = props;
     }
+
+    consoleText.value = initTla.out;
 
     require.config({
       paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
@@ -82,6 +85,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             JSON.stringify({
               tla: editor.getValue(),
               inv: invInputRef.current.value,
+              out: consoleText.value,
             }),
           );
         }, 2000);
@@ -92,6 +96,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const processText = async () => {
     if (!processDisabled.value) {
       processing.value = true;
+      consoleText.value = "> processing...";
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
       const resp = await fetch("/api", {
         method: "POST",

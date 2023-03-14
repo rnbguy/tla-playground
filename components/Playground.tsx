@@ -4,6 +4,7 @@ import PlaygroundBody from "../islands/PlaygroundBody.tsx";
 interface PlaygroundProps {
   tla: string;
   inv: string;
+  out: string;
 }
 
 export default function Playground(props: PlaygroundProps) {
