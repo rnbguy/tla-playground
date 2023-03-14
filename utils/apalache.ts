@@ -9,7 +9,7 @@ const config = loadSync({ allowEmptyValues: true });
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";
-const APALACHE_PORT_ID = config["APALACHE_SERVER_PORT"] || "8822";
+const APALACHE_PORT_ID = parseInt(config["APALACHE_SERVER_PORT"] || "8822");
 
 export class Apalache {
   version: string | undefined;
@@ -79,9 +79,10 @@ export class Apalache {
     }
   };
 
-  async setClient() {
+  async setClient(hostname?: string, port = APALACHE_PORT_ID) {
     this.client = getClient({
-      port: APALACHE_PORT_ID,
+      hostname,
+      port,
       root: await this.getCmdExecutorProto(),
       serviceName: "shai.cmdExecutor.CmdExecutor",
     });

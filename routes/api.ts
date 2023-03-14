@@ -1,5 +1,8 @@
 import { HandlerContext } from "$fresh/server.ts";
 import { Apalache } from "../utils/apalache.ts";
+import { loadSync } from "$std/dotenv/mod.ts";
+
+const config = loadSync({ allowEmptyValues: true });
 
 export const handler = {
   async POST(req: Request, _ctx: HandlerContext): Promise<Response> {
@@ -7,9 +10,18 @@ export const handler = {
 
     const bmcLength = 10;
 
+    let [apalacheHostname, apalachePort] = ["localhost", 8822];
+
+    if (config["APALACHE_ENDPOINT"]) {
+      const apalacheEndpoint = config["APALACHE_ENDPOINT"];
+      const splitIndex = apalacheEndpoint.indexOf(":");
+      apalacheHostname = apalacheEndpoint.slice(0, splitIndex);
+      apalachePort = parseInt(apalacheEndpoint.slice(splitIndex + 1));
+    }
+
     const apalache = new Apalache();
     await apalache.setVersion("0.30.5");
-    await apalache.setClient();
+    await apalache.setClient(apalacheHostname, apalachePort);
     const respJson = await apalache.modelCheck(
       jsonData.tla,
       jsonData.inv,
