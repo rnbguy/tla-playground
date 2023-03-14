@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import LemonIcon from "icons/lemon-2.tsx";
 import GithubIcon from "icons/brand-github.tsx";
 import IconMountain from "icons/mountain.tsx";
@@ -18,6 +18,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   const emptyInv = signal(false);
   const processing = signal(false);
+  const processDisabled = computed(() => emptyInv.value || processing.value);
 
   let editor = null;
 
@@ -31,23 +32,25 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
     });
 
-    editor = monaco.editor.create(editorRef.current, {
-      language: null,
-      readOnly: false,
-      automaticLayout: true,
-      contextmenu: true,
-      fontSize: 14,
-      lineHeight: 18,
-      lineNumbersMinChars: 2,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      smoothScrolling: true,
-      scrollbar: {
-        useShadows: false,
-        verticalScrollbarSize: 10,
-        horizontalScrollbarSize: 10,
-      },
-      overviewRulerLanes: 0,
+    require(["vs/editor/editor.main"], function () {
+      editor = monaco.editor.create(editorRef.current, {
+        language: null,
+        readOnly: false,
+        automaticLayout: true,
+        contextmenu: true,
+        fontSize: 14,
+        lineHeight: 18,
+        lineNumbersMinChars: 2,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        smoothScrolling: true,
+        scrollbar: {
+          useShadows: false,
+          verticalScrollbarSize: 10,
+          horizontalScrollbarSize: 10,
+        },
+        overviewRulerLanes: 0,
+      });
     });
 
     if (window.location.hash) {
@@ -84,7 +87,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   });
 
   const processText = async () => {
-    if (!emptyInv.value && !processing.value) {
+    if (!processDisabled.value) {
       processing.value = true;
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
       const resp = await fetch("/api", {
@@ -113,15 +116,13 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           ref={invInputRef}
           class="rounded py-1 px-4 text-gray-700 ring-1 ring-gray-200 active:ring-2 active:ring-gray-500"
           type="text"
-          placeholder="Invariant"
+          placeholder="Enter invariant name"
           onChange={updateInv}
           onInput={updateInv}
-          disabled={processing}
         />
         <button
-          class="rounded px-4 py-1 font-bold text-gray-900 bg-gray-50 ring-1 ring-gray-400 hover:bg-gray-900 hover:text-gray-50 active:ring-gray-700 active:ring-2 disabled:ring-pink-600 disabled:text-pink-600 disabled:hover:bg-pink-600 disabled:hover:ring-0 disabled:hover:text-pink-50 disabled:cursor-not-allowed"
+          class="rounded px-4 py-1 font-bold text-gray-900 bg-gray-50 ring-1 ring-gray-400 hover:bg-gray-900 hover:text-gray-50 active:ring-gray-700 active:ring-2"
           onClick={processText}
-          disabled={emptyInv || processing}
         >
           Verify
         </button>

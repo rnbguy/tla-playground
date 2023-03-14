@@ -10,7 +10,7 @@ export default function Playground(props: PlaygroundProps) {
   return (
     <html>
       <Head>
-        <title>TLA+ Playground - built with Fresh</title>
+        <title>TLA+ Playground</title>
         <link
           rel="stylesheet"
           data-name="vs/editor/editor.main"
