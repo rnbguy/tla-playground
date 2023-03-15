@@ -11,11 +11,26 @@ interface PlaygroundProps {
   out: string;
 }
 
+class Spinner {
+  #chars: Array<string>;
+  #index: number;
+  constructor(chars: Array<string>) {
+    this.#chars = chars;
+    this.#index = 0;
+  }
+  next(): string {
+    const rt = this.#chars[this.#index];
+    this.#index = (this.#index + 1) % this.#chars.length;
+    return rt;
+  }
+}
+
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef(null);
   const invInputRef = useRef(null);
 
-  const consoleText = signal(null);
+  const loadingText = signal("");
+  const consoleText = signal("");
 
   const emptyInv = signal(false);
   const processing = signal(false);
@@ -96,7 +111,15 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const processText = async () => {
     if (!processDisabled.value) {
       processing.value = true;
-      consoleText.value = "> processing...";
+
+      // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
+      const spinner = new Spinner(["...", " ..", ". .", ".. "]);
+      consoleText.value = "";
+
+      const spinnerTimer = setInterval(() => {
+        loadingText.value = `> processing ${spinner.next()}`;
+      }, 200);
+      consoleText.value = "";
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
       const resp = await fetch("/api", {
         method: "POST",
@@ -107,8 +130,10 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       });
       const respJson = await resp.json();
 
-      consoleText.value = yaml.stringify(respJson, { indent: 2 });
+      clearInterval(spinnerTimer);
+      loadingText.value = "";
 
+      consoleText.value = yaml.stringify(respJson, { indent: 2 });
       processing.value = false;
     }
   };
@@ -179,6 +204,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         >
         </div>
         <div class="flex-1 whitespace-pre pl-4 font-mono text-sm">
+          {loadingText}
           {consoleText}
         </div>
       </div>
