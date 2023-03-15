@@ -118,7 +118,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
       const spinnerTimer = setInterval(() => {
         loadingText.value = `> processing ${spinner.next()}`;
-      }, 200);
+      }, 100);
       consoleText.value = "";
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
       const resp = await fetch("/api", {
