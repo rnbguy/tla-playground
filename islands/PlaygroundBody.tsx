@@ -26,7 +26,8 @@ class Spinner {
 }
 
 const TLAPlusMonarchLanguage = {
-  defaultToken: "invalid",
+  // defaultToken: "invalid",
+  defaultToken: "",
 
   // keywords
   keywords: [
