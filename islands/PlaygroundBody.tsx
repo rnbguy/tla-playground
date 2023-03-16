@@ -86,8 +86,8 @@ const TLAPlusMonarchLanguage = {
   controlKeywords: ["IF", "THEN", "ELSE", "CASE", "OTHER"],
   // constants
   constants: ["TRUE", "FALSE"],
-  //symbols
-  symbols: [
+  // operators
+  operators: [
     "/\\",
     "\\/",
     "=",
@@ -129,6 +129,13 @@ const TLAPlusMonarchLanguage = {
     ">>>=",
   ],
 
+
+  // symbols
+  symbols:  /[=><!~?:&|+\-*\/\^%]+/,
+
+  escapes:
+    /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+
   tokenizer: {
     root: [
       { include: "@whitespace" },
@@ -140,7 +147,26 @@ const TLAPlusMonarchLanguage = {
         "comment",
       ]],
       // module end
-      [/={4,}\\s*/, "comment"],
+      [/={4,}\s*/, "comment"],
+      // single line comment
+      [/\\\*.*$/, "comment"],
+      // multi line comment
+      [/(?:\(\*)/, "comment", "@blockComment"],
+      // non-teminated string
+      [/"([^"\\]|\\.)*$/, "string.invalid"],
+      // string
+      [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
+      // characters
+      [/'[^\\']'/, "string"],
+      [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
+      [/'/, "string.invalid"],
+      // brackets
+      [/[{}()\[\]]/, "@brackets"],
+      [/[<>](?!@symbols)/, "@brackets"],
+      // symbols operators
+      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator" } }],
+      // delimiter
+      [/[;,.]/, "delimiter"],
       // embedded_operators
       [/\\[a-zA-Z]+\b/, "operator"],
       // numeric_constants
@@ -161,28 +187,25 @@ const TLAPlusMonarchLanguage = {
         /(\w+\s*(\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+\s)\s*\w+)\s*==(?!==)/,
         ["variable", "operator"],
       ],
-      // function_definitions
-      [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
-      // operators
-      [/(\w+\s*)(\()(?!\*)/, ["operator", "bracket", "invalid"]],
+      // // function_definitions
+      // [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
+      // // operators
+      // [/(\w+\s*)(\()(?!\*)/, ["operator", "bracket", "invalid"]],
       // inst_modules
       [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator", "keyword"]],
       // inst_module_refs
       [/\b\w+\s*!(?=\w)/, "entity"],
       // primed_operators
       [/\b\w+'/, "variable"],
-      // symbols
       // except_vars
       [/(?<=EXCEPT.*[^@])(@|!)(?!@)/, "variable"],
-      [/\\\*.*$/, "comment"],
-      [/(?:\(\*)/, "comment", "@blockComment"],
-      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@symbols": "operator" } }],
-      { include: "@string" },
+      // keywords
       [/\b\w+\b/, {
         cases: {
           "@keywords": "keyword",
           "@controlKeywords": "keyword",
           "@constants": "constant",
+          "@default": "identifier",
         },
       }],
     ],
@@ -190,9 +213,10 @@ const TLAPlusMonarchLanguage = {
       [/[ \t\r\n]+/, "white"],
     ],
     string: [
-      [/[^\"]+/, "string"],
-      [/\\"/, "string.escape"],
-      [/"/, "string", "@pop"],
+      [/[^\\"]+/, "string"],
+      [/@escapes/, "string.escape"],
+      [/\\./, "string.escape.invalid"],
+      [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
     ],
     blockComment: [
       [/\(\*/, "comment", "@push"],
