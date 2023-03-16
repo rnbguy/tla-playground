@@ -25,6 +25,182 @@ class Spinner {
   }
 }
 
+const TLAPlusMonarchLanguage = {
+  defaultToken: "invalid",
+
+  // keywords
+  keywords: [
+    "EXTENDS",
+    "VARIABLE",
+    "VARIABLES",
+    "LET",
+    "IN",
+    "EXCEPT",
+    "ENABLED",
+    "UNCHANGED",
+    "LAMBDA",
+    "DOMAIN",
+    "CONSTANT",
+    "CONSTANTS",
+    "CHOOSE",
+    "LOCAL",
+    "ASSUME",
+    "ASSUMPTION",
+    "AXIOM",
+    "RECURSIVE",
+    "INSTANCE",
+    "WITH",
+    "THEOREM",
+    "SUBSET",
+    "UNION",
+    "SF_",
+    "WF_",
+    "USE",
+    "DEFS",
+    "BY",
+    "DEF",
+    "SUFFICES",
+    "PROVE",
+    "OBVIOUS",
+    "NEW",
+    "QED",
+    "RECURSIVE",
+    "PICK",
+    "HIDE",
+    "DEFINE",
+    "WITNESS",
+    "HAVE",
+    "TAKE",
+    "PROOF",
+    "ACTION",
+    "COROLLARY",
+    "LEMMA",
+    "OMITTED",
+    "ONLY",
+    "PROPOSITION",
+    "STATE",
+    "TEMPORAL",
+  ],
+  // control_keywords
+  controlKeywords: ["IF", "THEN", "ELSE", "CASE", "OTHER"],
+  // constants
+  constants: ["TRUE", "FALSE"],
+  //symbols
+  symbols: [
+    "/\\",
+    "\\/",
+    "=",
+    ">",
+    "<",
+    "!",
+    "~",
+    "?",
+    ":",
+    "==",
+    "<=",
+    ">=",
+    "!=",
+    "&&",
+    "||",
+    "++",
+    "--",
+    "+",
+    "-",
+    "*",
+    "/",
+    "&",
+    "|",
+    "^",
+    "%",
+    "<<",
+    ">>",
+    ">>>",
+    "+=",
+    "-=",
+    "*=",
+    "/=",
+    "&=",
+    "|=",
+    "^=",
+    "%=",
+    "<<=",
+    ">>=",
+    ">>>=",
+  ],
+
+  tokenizer: {
+    root: [
+      { include: "@whitespace" },
+      // module start
+      [/(-{4,})(\s*MODULE\s*)(\w+)(\s*-{4,})/, [
+        "comment",
+        "keyword",
+        "type.indentifier.class",
+        "comment",
+      ]],
+      // module end
+      [/={4,}\\s*/, "comment"],
+      // embedded_operators
+      [/\\[a-zA-Z]+\b/, "operator"],
+      // numeric_constants
+      [
+        /(?:\b\d+|\\(?:b|B)[01]+|\\(?:o|O)[0-7]+|\\(?:h|H)[0-9a-fA-F]+)\b/,
+        "constant",
+      ],
+      // var_definitions
+      [/(\w+)(\s*==(?!\s*INSTANCE|==))/, ["variable", "operator"]],
+      // postfix_operator_definitions
+      [/(\w+)(\s*\^\+|\^\*|\^#\s*)(==(?!==))/, [
+        "variable",
+        "operator",
+        "operator",
+      ]],
+      // binary_operator_definitions
+      [
+        /(\w+\s*(\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+\s)\s*\w+)\s*==(?!==)/,
+        ["variable", "operator"],
+      ],
+      // function_definitions
+      [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
+      // operators
+      [/(\w+\s*)(\()(?!\*)/, ["operator", "bracket", "invalid"]],
+      // inst_modules
+      [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator", "keyword"]],
+      // inst_module_refs
+      [/\b\w+\s*!(?=\w)/, "entity"],
+      // primed_operators
+      [/\b\w+'/, "variable"],
+      // symbols
+      // except_vars
+      [/(?<=EXCEPT.*[^@])(@|!)(?!@)/, "variable"],
+      [/\\\*.*$/, "comment"],
+      [/(?:\(\*)/, "comment", "@blockComment"],
+      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@symbols": "operator" } }],
+      { include: "@string" },
+      [/\b\w+\b/, {
+        cases: {
+          "@keywords": "keyword",
+          "@controlKeywords": "keyword",
+          "@constants": "constant",
+        },
+      }],
+    ],
+    whitespace: [
+      [/[ \t\r\n]+/, "white"],
+    ],
+    string: [
+      [/[^\"]+/, "string"],
+      [/\\"/, "string.escape"],
+      [/"/, "string", "@pop"],
+    ],
+    blockComment: [
+      [/\(\*/, "comment", "@push"],
+      [/\*\)/, "comment", "@pop"],
+      [/./, "comment"],
+    ],
+  },
+};
+
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef(null);
   const invInputRef = useRef(null);
@@ -53,8 +229,15 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     require(
       ["vs/editor/editor.main", "vs/editor/editor.main.nls"],
       function (monaco) {
+        monaco.languages.register({ id: "tla" });
+
+        monaco.languages.setMonarchTokensProvider(
+          "tla",
+          TLAPlusMonarchLanguage,
+        );
+
         editor = monaco.editor.create(editorRef.current, {
-          language: null,
+          language: "tla",
           readOnly: false,
           automaticLayout: true,
           contextmenu: true,
