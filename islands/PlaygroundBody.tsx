@@ -177,6 +177,9 @@ const TLAPlusMonarchLanguage = {
       [/'[^\\']'/, "string"],
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"],
+      // embedded_operators
+      // \in \div
+      [/\\[a-zA-Z]+\b/, "operator.scss"],
       // brackets
       [/[\{\}\(\)\[\]]/, "delimiter.xml"],
       [/[<>](?!@symbols)/, "delimiter.xml"],
@@ -184,9 +187,6 @@ const TLAPlusMonarchLanguage = {
       [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator.scss" } }],
       // delimiter
       [/[;,.]/, "delimiter.xml"],
-      // embedded_operators
-      // \in \div
-      [/\\[a-zA-Z]+\b/, "operator.scss"],
       // numeric_constants
       // 12 b10 o73 h4a
       [
@@ -219,7 +219,7 @@ const TLAPlusMonarchLanguage = {
       // var' = var + 1
       [/(\b\w+)(')/, ["variable", "predefined.sql"]],
       // except_vars
-      [/(?<=EXCEPT.*[^@@])(@@|!)(?!@@)/, "predefined.sql"],
+      [/(?<=EXCEPT.*[^@])(@|!)(?!@)/, "predefined.sql"],
       // keywords
       [/\b\w+\b/, {
         cases: {
