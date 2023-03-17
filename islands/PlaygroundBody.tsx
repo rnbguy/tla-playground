@@ -129,9 +129,8 @@ const TLAPlusMonarchLanguage = {
     ">>>=",
   ],
 
-
   // symbols
-  symbols:  /[=><!~?:&|+\-*\/\^%]+/,
+  symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
   escapes:
     /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
@@ -161,7 +160,7 @@ const TLAPlusMonarchLanguage = {
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"],
       // brackets
-      [/[{}()\[\]]/, "@brackets"],
+      [/[\{\}\(\)\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       // symbols operators
       [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator" } }],
