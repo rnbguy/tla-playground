@@ -82,10 +82,13 @@ const TLAPlusMonarchLanguage = {
     "STATE",
     "TEMPORAL",
   ],
+
   // control_keywords
   controlKeywords: ["IF", "THEN", "ELSE", "CASE", "OTHER"],
-  // constants
-  constants: ["TRUE", "FALSE"],
+
+  // predefined constants
+  constants: ["TRUE", "FALSE", "Nat"],
+
   // operators
   operators: [
     "/\\",
@@ -225,7 +228,7 @@ const TLAPlusMonarchLanguage = {
         cases: {
           "@keywords": "keyword",
           "@controlKeywords": "keyword",
-          "@constants": "constant",
+          "@constants": "keyword.json",
           "@types": "type",
           "@default": "identifier",
         },
