@@ -129,6 +129,14 @@ const TLAPlusMonarchLanguage = {
     ">>>=",
   ],
 
+  types: [
+    "Bool",
+    "Int",
+    "Str",
+    "Set",
+    "Seq",
+  ],
+
   // symbols
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
@@ -139,6 +147,7 @@ const TLAPlusMonarchLanguage = {
     root: [
       { include: "@whitespace" },
       // module start
+      // ---- MODULE name ----
       [/(-{4,})(\s*MODULE\s*)(\w+)(\s*-{4,})/, [
         "comment",
         "keyword",
@@ -146,10 +155,19 @@ const TLAPlusMonarchLanguage = {
         "comment",
       ]],
       // module end
+      // ====
       [/={4,}\s*/, "comment"],
+      // type def in comment
+      // @type, @typeAlias
+      [/@@type(Alias)?\:/, "tag.id.pug"],
+      // custom types
+      // $myType
+      [/\$\b\w+\b/, "type"],
       // single line comment
-      [/\\\*.*$/, "comment"],
+      // \* comment
+      [/(?:\\\*)/, "comment", "@lineComment"],
       // multi line comment
+      // (* comment *)
       [/(?:\(\*)/, "comment", "@blockComment"],
       // non-teminated string
       [/"([^"\\]|\\.)*$/, "string.invalid"],
@@ -160,50 +178,55 @@ const TLAPlusMonarchLanguage = {
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"],
       // brackets
-      [/[\{\}\(\)\[\]]/, "@brackets"],
-      [/[<>](?!@symbols)/, "@brackets"],
+      [/[\{\}\(\)\[\]]/, "delimiter.xml"],
+      [/[<>](?!@symbols)/, "delimiter.xml"],
       // symbols operators
-      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator" } }],
+      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator.scss" } }],
       // delimiter
-      [/[;,.]/, "delimiter"],
+      [/[;,.]/, "delimiter.xml"],
       // embedded_operators
-      [/\\[a-zA-Z]+\b/, "operator"],
+      // \in \div
+      [/\\[a-zA-Z]+\b/, "operator.scss"],
       // numeric_constants
+      // 12 b10 o73 h4a
       [
         /(?:\b\d+|\\(?:b|B)[01]+|\\(?:o|O)[0-7]+|\\(?:h|H)[0-9a-fA-F]+)\b/,
-        "constant",
+        "number.hex",
       ],
       // var_definitions
-      [/(\w+)(\s*==(?!\s*INSTANCE|==))/, ["variable", "operator"]],
+      //
+      [/(\w+)(\s*==(?!\s*INSTANCE|==))/, ["variable", "operator.scss"]],
       // postfix_operator_definitions
       [/(\w+)(\s*\^\+|\^\*|\^#\s*)(==(?!==))/, [
         "variable",
-        "operator",
-        "operator",
+        "operator.sql",
+        "operator.scss",
       ]],
       // binary_operator_definitions
       [
-        /(\w+\s*(\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+\s)\s*\w+)\s*==(?!==)/,
-        ["variable", "operator"],
+        /(\w+)(\s*(\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+\s)\s*\w+)\s*==(?!==)/,
+        ["variable", "operator.sql", "operator.scss"],
       ],
       // // function_definitions
       // [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
       // // operators
       // [/(\w+\s*)(\()(?!\*)/, ["operator", "bracket", "invalid"]],
       // inst_modules
-      [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator", "keyword"]],
+      [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator.scss", "keyword"]],
       // inst_module_refs
-      [/\b\w+\s*!(?=\w)/, "entity"],
+      [/\b\w+\s*!(?=\w)/, "metatag.html"],
       // primed_operators
-      [/\b\w+'/, "variable"],
+      // var' = var + 1
+      [/(\b\w+)(')/, ["variable", "predefined.sql"]],
       // except_vars
-      [/(?<=EXCEPT.*[^@])(@|!)(?!@)/, "variable"],
+      [/(?<=EXCEPT.*[^@@])(@@|!)(?!@@)/, "predefined.sql"],
       // keywords
       [/\b\w+\b/, {
         cases: {
           "@keywords": "keyword",
           "@controlKeywords": "keyword",
           "@constants": "constant",
+          "@types": "type",
           "@default": "identifier",
         },
       }],
@@ -217,10 +240,25 @@ const TLAPlusMonarchLanguage = {
       [/\\./, "string.escape.invalid"],
       [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
     ],
+    lineComment: [
+      [/\\\*/, "comment", "@push"],
+      [/(?=@@type(?:Alias)?)/, "comment", "@lineType"],
+      [/.$/, "comment", "@pop"],
+      [/./, "comment"],
+    ],
+    lineType: [
+      [/(?=.$)/, "comment", "@pop"],
+      { include: "@root" },
+    ],
     blockComment: [
       [/\(\*/, "comment", "@push"],
+      [/(?=@@type(?:Alias)?)/, "comment", "@blockType"],
       [/\*\)/, "comment", "@pop"],
       [/./, "comment"],
+    ],
+    blockType: [
+      [/(?=\*\))/, "comment", "@pop"],
+      { include: "@root" },
     ],
   },
 };
