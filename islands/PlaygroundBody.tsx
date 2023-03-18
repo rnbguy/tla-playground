@@ -168,10 +168,10 @@ const TLAPlusMonarchLanguage = {
       [/\$\b\w+\b/, "type"],
       // single line comment
       // \* comment
-      [/(?:\\\*)/, "comment", "@lineComment"],
+      [/\\\*/, "comment", "@lineComment"],
       // multi line comment
       // (* comment *)
-      [/(?:\(\*)/, "comment", "@blockComment"],
+      [/\(\*/, "comment", "@blockComment"],
       // non-teminated string
       [/"([^"\\]|\\.)*$/, "string.invalid"],
       // string
@@ -212,8 +212,9 @@ const TLAPlusMonarchLanguage = {
       ],
       // // function_definitions
       // [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
-      // // operators
-      // [/(\w+\s*)(\()(?!\*)/, ["operator", "bracket", "invalid"]],
+      // operators
+      // MyOperator(arg1, arg2)
+      [/\w+\s*(?=\((?!\*))/, "variable"],
       // inst_modules
       [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator.scss", "keyword"]],
       // inst_module_refs
@@ -246,6 +247,7 @@ const TLAPlusMonarchLanguage = {
     lineComment: [
       [/\\\*/, "comment", "@push"],
       [/(?=@@type(?:Alias)?)/, "comment", "@lineType"],
+      [/;$/, "delimiter.xml", "@pop"],
       [/.$/, "comment", "@pop"],
       [/./, "comment"],
     ],
