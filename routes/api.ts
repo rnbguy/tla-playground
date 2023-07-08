@@ -19,7 +19,7 @@ export const handler = {
     }
 
     const apalache = new Apalache();
-    await apalache.setVersion("0.30.5");
+    await apalache.setVersion("0.40.7");
     await apalache.setClient(apalacheHostname, apalachePort);
     const respJson = await apalache.modelCheck(
       jsonData.tla,
