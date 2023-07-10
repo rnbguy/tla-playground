@@ -1,11 +1,15 @@
-# fresh project
+# tla-playground
 
 ### Usage
 
-Start the project:
+Start Apalache server:
 
 ```
-deno task start
+apalache server
 ```
 
-This will watch the project directory and restart as necessary.
+Serve the playground frontend:
+
+```
+APALACHE_ENDPOINT=localhost:8822 deno task start
+```
