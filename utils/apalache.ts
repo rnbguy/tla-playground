@@ -4,33 +4,69 @@ import { copy } from "$std/streams/copy.ts";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
 
-const config = Deno.env.toObject();
+import { default as protobuf } from "protobufjs";
+import { default as protobufDescriptor } from "protobufjs-descriptor/index.js";
+
+import type { IFileDescriptorProto } from "protobufjs-descriptor/index.js";
+
+const REFLECTION_PROTO_URL =
+  "https://github.com/grpc/grpc/raw/master/src/proto/grpc/reflection/v1alpha/reflection.proto";
+const GRPC_REFLECTION_SERVICE_NAME = "grpc.reflection.v1alpha.ServerReflection";
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";
-const APALACHE_PORT_ID = parseInt(config["APALACHE_SERVER_PORT"] || "8822");
+const APALACHE_SERVICE_NAME = "shai.cmdExecutor.CmdExecutor";
 
 export class Apalache {
   version: string | undefined;
-  process: Deno.Process | undefined;
+  process: Deno.ChildProcess | undefined;
   client: GrpcClient | undefined;
+
   async setVersion(version: string) {
     if (version == "latest") {
       version = await this.getLatestVersion();
     }
     this.version = version.replace(/^v/, "");
   }
+
   async getLatestVersion(): Promise<string> {
     const urlPath = `https://api.github.com/repos/${GH_REPO}/releases/latest`;
     const resp = await (await fetch(urlPath)).json();
     return resp.tag_name;
   }
-  getCmdExecutorProtoUrl(): string {
-    return `https://github.com/informalsystems/apalache/raw/v${this.version}/shai/src/main/protobuf/cmdExecutor.proto`;
-  }
 
-  async getCmdExecutorProto(): Promise<string> {
-    return await (await fetch(this.getCmdExecutorProtoUrl())).text();
+  async getCmdExecutorProto(
+    connectOption: Deno.ConnectOptions,
+  ): Promise<protobuf.Root> {
+    const reflectionProtoFile = await cache(REFLECTION_PROTO_URL);
+    const reflectionProto = await Deno.readTextFile(reflectionProtoFile.path);
+
+    const reflectionClient = getClient({
+      root: reflectionProto,
+      serviceName: GRPC_REFLECTION_SERVICE_NAME,
+      ...connectOption,
+    });
+
+    const respStream = reflectionClient.ServerReflectionInfo({
+      fileContainingSymbol: APALACHE_SERVICE_NAME,
+    });
+
+    const resp = await respStream.next();
+    respStream.return();
+    reflectionClient.close();
+
+    const fileDescriptorProtos = resp.value.fileDescriptorResponse
+      .fileDescriptorProto.map((buf) =>
+        protobufDescriptor.FileDescriptorProto.decode(
+          buf,
+        ) as IFileDescriptorProto
+      );
+
+    const fileDescriptorSet = protobufDescriptor.FileDescriptorSet.fromObject({
+      file: fileDescriptorProtos,
+    });
+
+    return protobuf.Root.fromDescriptor(fileDescriptorSet);
   }
 
   getJarName(): string {
@@ -60,29 +96,39 @@ export class Apalache {
     }
   }
   spawnServer = () => {
-    this.process = Deno.run({
-      cmd: [
-        "java",
+    const config = Deno.env.toObject();
+    const APALACHE_PORT_ID = parseInt(config["APALACHE_SERVER_PORT"] || "8822");
+
+    const command = new Deno.Command("java", {
+      args: [
         "-jar",
         this.getJarName(),
         "server",
         `--port=${APALACHE_PORT_ID}`,
       ],
     });
+
+    this.process = command.spawn();
   };
   killServer = () => {
     if (this.process) {
       this.process.kill("SIGINT");
-      this.process.close();
     }
   };
 
-  async setClient(hostname?: string, port = APALACHE_PORT_ID) {
+  async setClient(hostname?: string, port?: number) {
+    if (port === undefined) {
+      const config = Deno.env.toObject();
+      const APALACHE_PORT_ID = parseInt(
+        config["APALACHE_SERVER_PORT"] || "8822",
+      );
+      port = APALACHE_PORT_ID;
+    }
     this.client = getClient({
       hostname,
       port,
-      root: await this.getCmdExecutorProto(),
-      serviceName: "shai.cmdExecutor.CmdExecutor",
+      root: await this.getCmdExecutorProto({ hostname, port }),
+      serviceName: APALACHE_SERVICE_NAME,
     });
   }
 
