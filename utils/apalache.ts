@@ -36,8 +36,9 @@ export class Apalache {
   async getCmdExecutorProto(
     connectOption: Deno.ConnectOptions,
   ): Promise<protobuf.Root> {
-    const reflectionProtoFile = await cache(REFLECTION_PROTO_URL);
-    const reflectionProto = await Deno.readTextFile(reflectionProtoFile.path);
+    const reflectionProto: string = await fetch(REFLECTION_PROTO_URL).then((
+      resp,
+    ) => resp.text());
 
     const reflectionClient = getClient({
       root: reflectionProto,
