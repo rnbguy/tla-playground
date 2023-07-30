@@ -5,9 +5,7 @@ import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
 
 import { default as protobuf } from "protobufjs";
-import { default as protobufDescriptor } from "protobufjs-descriptor/index.js";
-
-import type { IFileDescriptorProto } from "protobufjs-descriptor/index.js";
+import { default as protobufDescriptor } from "protobufjs/ext/descriptor";
 
 const REFLECTION_PROTO_URL =
   "https://github.com/grpc/grpc/raw/master/src/proto/grpc/reflection/v1alpha/reflection.proto";
@@ -59,7 +57,7 @@ export class Apalache {
       .fileDescriptorProto.map((buf) =>
         protobufDescriptor.FileDescriptorProto.decode(
           buf,
-        ) as IFileDescriptorProto
+        )
       );
 
     const fileDescriptorSet = protobufDescriptor.FileDescriptorSet.fromObject({

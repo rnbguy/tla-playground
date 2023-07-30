@@ -19,8 +19,8 @@
     "twind/": "https://esm.sh/twind@0.16.19/",
     "icons/": "https://deno.land/x/tabler_icons_tsx@0.0.4/tsx/",
     "grpc_basic/": "https://deno.land/x/grpc_basic@0.4.7/",
-    "protobufjs": "https://esm.sh/protobufjs@7.2.4",
-    "protobufjs-descriptor/": "https://esm.sh/protobufjs@7.2.4/ext/descriptor/",
+    "protobufjs": "https://jspm.dev/protobufjs@7.2.4",
+    "protobufjs/": "https://jspm.dev/protobufjs@7.2.4/",
     "cache/": "https://deno.land/x/cache@0.2.13/"
   }
 }
