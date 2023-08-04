@@ -358,6 +358,19 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     );
   });
 
+  async function remoteServer(
+    data: { tla: string; inv: string },
+  ): Promise<any> {
+    const resp = await fetch("/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return await resp.json();
+  }
+
   const processText = async () => {
     if (!processDisabled.value) {
       processing.value = true;
@@ -371,14 +384,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       }, 100);
       consoleText.value = "";
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
-      const resp = await fetch("/api", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      const respJson = await resp.json();
+      const respJson = await remoteServer(data);
 
       clearInterval(spinnerTimer);
       loadingText.value = "";
