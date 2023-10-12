@@ -459,7 +459,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           ref={editorRef}
         >
         </div>
-        <div class="flex-1 whitespace-pre pl-4 font-mono text-sm">
+        <div class="flex-1 overflow-auto whitespace-pre pl-4 font-mono text-sm">
           {loadingText}
           {consoleText}
         </div>
