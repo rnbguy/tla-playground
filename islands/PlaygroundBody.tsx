@@ -453,7 +453,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           </div>
         </div>
       </div>
-      <div class="flex-grow flex flex-row">
+      <div class="min-h-screen min-w-screen flex flex-col md:flex-row">
         <div
           class="flex-1"
           ref={editorRef}
