@@ -2,21 +2,22 @@
 // This file SHOULD be checked into source version control.
 // This file is automatically updated during development when running `dev.ts`.
 
-import * as $0 from "./routes/_app.tsx";
-import * as $1 from "./routes/api.ts";
-import * as $2 from "./routes/index.tsx";
-import * as $$0 from "./islands/PlaygroundBody.tsx";
+import * as $_app from "./routes/_app.tsx";
+import * as $api from "./routes/api.ts";
+import * as $index from "./routes/index.tsx";
+import * as $PlaygroundBody from "./islands/PlaygroundBody.tsx";
+import { type Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
-    "./routes/_app.tsx": $0,
-    "./routes/api.ts": $1,
-    "./routes/index.tsx": $2,
+    "./routes/_app.tsx": $_app,
+    "./routes/api.ts": $api,
+    "./routes/index.tsx": $index,
   },
   islands: {
-    "./islands/PlaygroundBody.tsx": $$0,
+    "./islands/PlaygroundBody.tsx": $PlaygroundBody,
   },
   baseUrl: import.meta.url,
-};
+} satisfies Manifest;
 
 export default manifest;
