@@ -1,1 +1,5 @@
+# npm node_modules
 node_modules/
+
+# Fresh build directory
+_fresh/
