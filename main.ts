@@ -6,15 +6,13 @@
 
 import { start } from "$fresh/server.ts";
 import manifest from "./fresh.gen.ts";
+import config from "./fresh.config.ts";
 
-import tailwindPlugin from "$fresh/plugins/tailwind.ts";
-import tailwindConfig from "./tailwind.config.ts";
+const envVars = Deno.env.toObject();
 
-const config = Deno.env.toObject();
-
-const FRESH_PORT_ID = parseInt(config["FRESH_SERVER_PORT"] || "8000");
+const FRESH_PORT_ID = parseInt(envVars["FRESH_SERVER_PORT"] || "8000");
 
 await start(manifest, {
-  plugins: [tailwindPlugin(tailwindConfig)],
+  ...config,
   port: FRESH_PORT_ID,
 });
