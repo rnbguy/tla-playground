@@ -3,6 +3,7 @@ import { readerFromStreamReader } from "@std/io";
 import { copy } from "@std/io";
 import { cache } from "cache/mod.ts";
 import { promisify } from "node:util";
+import { default as protobuf } from "@protobufjs";
 import { default as protobufDescriptor } from "@protobufjs/ext/descriptor/index.js";
 import * as grpc from "@grpc/grpc-js";
 import * as proto from "@grpc/proto-loader";
@@ -56,6 +57,7 @@ export class Apalache {
   version: string | undefined;
   process: Deno.ChildProcess | undefined;
   client: CmdExecutor | undefined;
+  protoRoot: protobuf.Root | undefined;
 
   async setVersion(version: string) {
     if (version == "latest") {
@@ -68,23 +70,6 @@ export class Apalache {
     const urlPath = `https://api.github.com/repos/${GH_REPO}/releases/latest`;
     const resp = await (await fetch(urlPath)).json();
     return resp.tag_name;
-  }
-
-  getCmdExecutorService(
-    packageDefinition: proto.PackageDefinition,
-    connectOption: Deno.ConnectOptions,
-  ): CmdExecutor {
-    // TODO(rano): would be nice to return protobuf.Root here.
-    // how can we use protobuf.Root.fromDescriptor ?
-
-    const apalacheService = grpc.loadPackageDefinition(
-      packageDefinition,
-    ) as unknown as ShaiPkg;
-
-    return new apalacheService.shai.cmdExecutor.CmdExecutor(
-      `${connectOption.hostname}:${connectOption.port}`,
-      grpc.credentials.createInsecure(),
-    );
   }
 
   getJarName(): string {
@@ -148,7 +133,10 @@ export class Apalache {
     const reflectionClient = await getReflectionClient(conn_opt);
 
     // Query reflection endpoint (retry if server is unreachable)
-    const apalacheProtoDef: proto.PackageDefinition = await new Promise<
+    const [apalalcheProtoRoot, apalacheProtoDef]: [
+      protobuf.Root,
+      proto.PackageDefinition,
+    ] = await new Promise<
       ServerReflectionResponse
     >(
       (resolve, reject) => {
@@ -175,14 +163,36 @@ export class Apalache {
           );
 
         // Use proto-loader to load the FileDescriptorProto wrapped in a FileDescriptorSet
-        return proto.loadFileDescriptorSetFromObject(
+        const packageDefinition = proto.loadFileDescriptorSetFromObject(
           { file: fileDescriptorProtos },
           grpcStubOptions,
         );
+
+        const fileDescriptorSetMessage = protobufDescriptor.FileDescriptorSet
+          .fromObject({
+            file: fileDescriptorProtos,
+          });
+
+        const protobufRoot = protobuf.Root.fromDescriptor(
+          fileDescriptorSetMessage,
+        );
+
+        // console.log(protobufRoot.lookupService(APALACHE_SERVICE_NAME));
+
+        return [protobufRoot, packageDefinition];
       }
     });
 
-    this.client = this.getCmdExecutorService(apalacheProtoDef, conn_opt);
+    this.protoRoot = apalalcheProtoRoot;
+
+    const apalacheService = grpc.loadPackageDefinition(
+      apalacheProtoDef,
+    ) as unknown as ShaiPkg;
+
+    this.client = new apalacheService.shai.cmdExecutor.CmdExecutor(
+      `${conn_opt.hostname}:${conn_opt.port}`,
+      grpc.credentials.createInsecure(),
+    );
   }
 
   async modelCheck(tla: string, inv: string, length: number): Promise<any> {
@@ -206,8 +216,7 @@ export class Apalache {
     };
 
     const cmd = {
-      // cmd: this.client.svc.lookup("Cmd").values.CHECK,
-      cmd: "CHECK",
+      cmd: this.protoRoot?.lookupEnum("Cmd").values.CHECK,
       config: JSON.stringify(config),
     };
 
@@ -235,8 +244,7 @@ export class Apalache {
     };
 
     const cmd = {
-      // cmd: this.client.svc.lookup("Cmd").values.SIMULATE,
-      cmd: "SIMULATE",
+      cmd: this.protoRoot?.lookupEnum("Cmd").values.SIMULATE,
       config: JSON.stringify(config),
     };
     const resp = await promisify((
