@@ -3,7 +3,7 @@ import { computed, signal } from "@preact/signals";
 import LemonIcon from "icons/lemon-2.tsx";
 import GithubIcon from "icons/brand-github.tsx";
 import IconMountain from "icons/mountain.tsx";
-import * as yaml from "$std/yaml/mod.ts";
+import * as yaml from "@std/yaml";
 
 interface PlaygroundProps {
   tla: string;

@@ -1,6 +1,6 @@
-import { Untar } from "$std/archive/mod.ts";
-import { readerFromStreamReader } from "$std/streams/mod.ts";
-import { copy } from "$std/streams/copy.ts";
+import { Untar } from "@std/archive";
+import { readerFromStreamReader } from "@std/io";
+import { copy } from "@std/io";
 import { getClient, GrpcClient } from "grpc_basic/client.ts";
 import { cache } from "cache/mod.ts";
 
