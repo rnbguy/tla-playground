@@ -20,9 +20,9 @@
     "tailwindcss": "npm:tailwindcss@3.3.5",
     "tailwindcss/plugin": "npm:/tailwindcss@3.3.5/plugin.js",
     "icons/": "https://deno.land/x/tabler_icons_tsx@0.0.4/tsx/",
-    "grpc_basic/": "https://deno.land/x/grpc_basic@0.4.7/",
-    "protobufjs": "https://jspm.dev/protobufjs@7.2.5",
-    "protobufjs/": "https://jspm.dev/protobufjs@7.2.5/",
+    "@grpc": "npm:@grpc",
+    "@protobufjs": "npm:protobufjs@7.2.5",
+    "@protobufjs/ext/descriptor": "npm:protobufjs@7.2.5/ext/descriptor",
     "cache/": "https://deno.land/x/cache@0.2.13/"
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
