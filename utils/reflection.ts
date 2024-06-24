@@ -1,4 +1,4 @@
-import { default as protobuf } from "@protobufjs";
+import { default as protobuf } from "protobufjs";
 
 import { Buffer } from "node:buffer";
 
