@@ -227,6 +227,30 @@ export class Apalache {
     return resp;
   }
 
+  async modelTypeCheck(tla: string): Promise<any> {
+    const config = {
+      input: {
+        source: {
+          type: "string",
+          content: tla,
+          aux: [],
+          format: "tla",
+        },
+      },
+    };
+
+    const cmd = {
+      cmd: this.protoRoot?.lookupEnum("Cmd").values.TYPECHECK,
+      config: JSON.stringify(config),
+    };
+
+    const resp = await promisify((
+      data: RunRequest,
+      callback: (err: any, res: RunResponse) => void,
+    ) => this.client?.run(data, callback))(cmd);
+    return resp;
+  }
+
   async modelSimulate(tla: string): Promise<any> {
     const config = {
       input: {

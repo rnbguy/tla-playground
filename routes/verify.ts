@@ -1,10 +1,9 @@
-import { HandlerContext } from "$fresh/server.ts";
 import { Apalache } from "../utils/apalache.ts";
 
 const config = Deno.env.toObject();
 
 export const handler = {
-  async POST(req: Request, _ctx: HandlerContext): Promise<Response> {
+  async POST(req: Request): Promise<Response> {
     const jsonData = await req.json();
 
     const bmcLength = 10;
