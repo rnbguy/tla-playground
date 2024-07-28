@@ -5,6 +5,7 @@
 import * as $_app from "./routes/_app.tsx";
 import * as $index from "./routes/index.tsx";
 import * as $invariants from "./routes/invariants.ts";
+import * as $ping from "./routes/ping.ts";
 import * as $verify from "./routes/verify.ts";
 import * as $PlaygroundBody from "./islands/PlaygroundBody.tsx";
 import { type Manifest } from "$fresh/server.ts";
@@ -14,6 +15,7 @@ const manifest = {
     "./routes/_app.tsx": $_app,
     "./routes/index.tsx": $index,
     "./routes/invariants.ts": $invariants,
+    "./routes/ping.ts": $ping,
     "./routes/verify.ts": $verify,
   },
   islands: {
