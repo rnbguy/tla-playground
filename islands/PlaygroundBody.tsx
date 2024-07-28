@@ -270,14 +270,34 @@ const TLAPlusMonarchLanguage = {
 
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef(null);
-  const invInputRef = useRef(null);
 
   const loadingText = signal("");
   const consoleText = signal("");
 
-  const emptyInv = signal(false);
-  const processing = signal(false);
-  const processDisabled = computed(() => emptyInv.value || processing.value);
+  const selectedInv = signal("");
+  const allInvs = signal([]);
+
+  const allInvsOption = computed(() => {
+    const options = [
+      <option
+        value=""
+        disabled
+        selected={!allInvs.value.includes(selectedInv.value)}
+      >
+        Select an invariant
+      </option>,
+    ];
+
+    options.push(
+      ...allInvs.value.map((inv) => (
+        <option value={inv} selected={selectedInv.value === inv}>
+          {inv}
+        </option>
+      )),
+    );
+
+    return options;
+  });
 
   let editor = null;
 
@@ -333,23 +353,25 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               console.error(error);
               window.location.hash = "";
               editor.setValue(initTla.tla.trimStart());
-              invInputRef.current.value = initTla.inv;
             });
         } else {
           editor.setValue(initTla.tla.trimStart());
-          invInputRef.current.value = initTla.inv;
         }
         editor.addCommand(
           monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
           processText,
         );
 
+        allInvs.value = initTla.invs;
+        selectedInv.value = initTla.inv;
+
         setInterval(() => {
           localStorage.setItem(
             "tla-snippet",
             JSON.stringify({
               tla: editor.getValue(),
-              inv: invInputRef.current.value,
+              invs: allInvs.value,
+              inv: selectedInv.value,
               out: consoleText.value,
             }),
           );
@@ -383,9 +405,13 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   }
 
   const processText = async () => {
-    if (!processDisabled.value) {
-      processing.value = true;
+    const tla = editor.getValue();
 
+    const invariants = await tlaInvariants({ tla });
+
+    allInvs.value = invariants;
+
+    if (invariants.includes(selectedInv.value)) {
       // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
       const spinner = new Spinner(["...", " ..", ". .", ".. "]);
       consoleText.value = "";
@@ -394,32 +420,25 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         loadingText.value = `> processing ${spinner.next()}`;
       }, 100);
       consoleText.value = "";
-      const data = { tla: editor.getValue(), inv: invInputRef.current.value };
+      const data = { tla, inv: selectedInv.value };
       const respJson = await tlaVerify(data);
 
       clearInterval(spinnerTimer);
       loadingText.value = "";
 
       consoleText.value = yaml.stringify(respJson, { indent: 2 });
-      processing.value = false;
     }
-  };
-
-  const updateInv = (e) => {
-    emptyInv.value = !e.target.value;
   };
 
   return (
     <div class="flex flex-col h-screen">
       <div class="p-2 flex flex-row items-center gap-3">
-        <input
-          ref={invInputRef}
+        <select
           class="rounded py-1 px-4 text-gray-700 ring-1 ring-gray-200 active:ring-2 active:ring-gray-500"
-          type="text"
-          placeholder="Enter invariant name"
-          onChange={updateInv}
-          onInput={updateInv}
-        />
+          onChange={(e) => selectedInv.value = e.target.value}
+        >
+          {allInvsOption}
+        </select>
         <button
           class="rounded px-4 py-1 font-bold text-gray-900 bg-gray-50 ring-1 ring-gray-400 hover:bg-gray-900 hover:text-gray-50 active:ring-gray-700 active:ring-2"
           onClick={processText}
