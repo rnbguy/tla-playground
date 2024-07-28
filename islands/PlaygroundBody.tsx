@@ -283,19 +283,21 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       <option
         value=""
         disabled
-        selected={!allInvs.value.includes(selectedInv.value)}
+        selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
       >
         Select an invariant
       </option>,
     ];
 
-    options.push(
-      ...allInvs.value.map((inv) => (
-        <option value={inv} selected={selectedInv.value === inv}>
-          {inv}
-        </option>
-      )),
-    );
+    if (allInvs.value && allInvs.value.length > 0) {
+      options.push(
+        ...allInvs.value.map((inv) => (
+          <option value={inv} selected={selectedInv.value === inv}>
+            {inv}
+          </option>
+        )),
+      );
+    }
 
     return options;
   });
