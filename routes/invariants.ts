@@ -6,8 +6,6 @@ export const handler = {
   async POST(req: Request): Promise<Response> {
     const jsonData = await req.json();
 
-    const bmcLength = 10;
-
     let [apalacheHostname, apalachePort] = ["localhost", 8822];
 
     if (config["APALACHE_ENDPOINT"]) {
