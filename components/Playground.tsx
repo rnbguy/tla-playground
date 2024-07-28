@@ -3,6 +3,7 @@ import PlaygroundBody from "../islands/PlaygroundBody.tsx";
 
 interface PlaygroundProps {
   tla: string;
+  invs: string[];
   inv: string;
   out: string;
 }

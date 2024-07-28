@@ -7,6 +7,7 @@ import * as yaml from "https://deno.land/std@0.224.0/yaml/mod.ts";
 
 interface PlaygroundProps {
   tla: string;
+  invs: string[];
   inv: string;
   out: string;
 }
