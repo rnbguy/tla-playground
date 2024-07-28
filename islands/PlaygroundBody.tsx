@@ -447,9 +447,13 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       errorText.value = "";
       consoleText.value = "";
 
-      const spinnerTimer = setInterval(() => {
-        loadingText.value = `> processing ${spinner.next()}`;
-      }, 100);
+      const spinnerTimer = setInterval(
+        function x() {
+          loadingText.value = `> processing ${spinner.next()}`;
+          return x;
+        }(),
+        100,
+      );
       consoleText.value = "";
       const data = { tla, inv: selectedInv.value };
       const respJson = await tlaVerify(data);
