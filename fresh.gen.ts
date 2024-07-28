@@ -3,16 +3,18 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $_app from "./routes/_app.tsx";
-import * as $api from "./routes/api.ts";
 import * as $index from "./routes/index.tsx";
+import * as $invariants from "./routes/invariants.ts";
+import * as $verify from "./routes/verify.ts";
 import * as $PlaygroundBody from "./islands/PlaygroundBody.tsx";
 import { type Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
     "./routes/_app.tsx": $_app,
-    "./routes/api.ts": $api,
     "./routes/index.tsx": $index,
+    "./routes/invariants.ts": $invariants,
+    "./routes/verify.ts": $verify,
   },
   islands: {
     "./islands/PlaygroundBody.tsx": $PlaygroundBody,
