@@ -358,7 +358,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     );
   });
 
-  async function invariantList(data: { tla: string }): Promise<string[]> {
+  async function tlaInvariants(data: { tla: string }): Promise<string[]> {
     const resp = await fetch("/invariants", {
       method: "POST",
       headers: {
@@ -369,7 +369,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     return await resp.json();
   }
 
-  async function remoteServer(
+  async function tlaVerify(
     data: { tla: string; inv: string },
   ): Promise<any> {
     const resp = await fetch("/verify", {
@@ -395,7 +395,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       }, 100);
       consoleText.value = "";
       const data = { tla: editor.getValue(), inv: invInputRef.current.value };
-      const respJson = await remoteServer(data);
+      const respJson = await tlaVerify(data);
 
       clearInterval(spinnerTimer);
       loadingText.value = "";
