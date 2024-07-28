@@ -273,6 +273,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   const loadingText = signal("");
   const consoleText = signal("");
+  const errorText = signal("");
 
   const selectedInv = signal("");
   const allInvs = signal([]);
@@ -380,32 +381,59 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     );
   });
 
+  async function ping(): Promise<any> {
+    try {
+      return await fetch("/ping", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then((resp) => resp.json());
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
   async function tlaInvariants(data: { tla: string }): Promise<string[]> {
-    const resp = await fetch("/invariants", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    return await resp.json();
+    try {
+      return await fetch("/invariants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }).then((resp) => resp.json());
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
   }
 
   async function tlaVerify(
     data: { tla: string; inv: string },
   ): Promise<any> {
-    const resp = await fetch("/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-    return await resp.json();
+    try {
+      return await fetch("/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }).then((resp) => resp.json());
+    } catch (error) {
+      return { error: error.message };
+    }
   }
 
   const processText = async () => {
     const tla = editor.getValue();
+
+    const pingResp = await ping();
+    if (pingResp.status !== "ok") {
+      consoleText.value = "";
+      errorText.value = "> Apalache server is down !";
+      return;
+    }
 
     const invariants = await tlaInvariants({ tla });
 
@@ -414,6 +442,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     if (invariants.includes(selectedInv.value)) {
       // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
       const spinner = new Spinner(["...", " ..", ". .", ".. "]);
+      errorText.value = "";
       consoleText.value = "";
 
       const spinnerTimer = setInterval(() => {
@@ -492,6 +521,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         <div class="flex-1 overflow-auto whitespace-pre pl-4 font-mono text-sm">
           {loadingText}
           {consoleText}
+          {errorText}
         </div>
       </div>
     </div>
