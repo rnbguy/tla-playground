@@ -358,10 +358,21 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     );
   });
 
+  async function invariantList(data: { tla: string }): Promise<string[]> {
+    const resp = await fetch("/invariants", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return await resp.json();
+  }
+
   async function remoteServer(
     data: { tla: string; inv: string },
   ): Promise<any> {
-    const resp = await fetch("/api", {
+    const resp = await fetch("/verify", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
