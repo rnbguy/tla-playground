@@ -6,7 +6,7 @@
     "preview": "deno run -A main.ts"
   },
   "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "preact" },
-  "nodeModulesDir": true,
+  "nodeModulesDir": "auto",
   "imports": {
     "@grpc/grpc-js": "npm:@grpc/grpc-js@^1.10.9",
     "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.7.13",
