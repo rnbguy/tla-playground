@@ -8,7 +8,7 @@ import * as $invariants from "./routes/invariants.ts";
 import * as $ping from "./routes/ping.ts";
 import * as $verify from "./routes/verify.ts";
 import * as $PlaygroundBody from "./islands/PlaygroundBody.tsx";
-import { type Manifest } from "$fresh/server.ts";
+import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
