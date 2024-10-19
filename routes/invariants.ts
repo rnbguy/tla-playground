@@ -24,9 +24,11 @@ export const handler = {
 
     if (respJson.result === "success") {
       const resp = JSON.parse(respJson.success);
-      const invariants = resp.modules[0].declarations.filter((d) =>
-        d.type === "Bool" || d.type === "(() => Bool)"
-      ).map((d) => d.name);
+      const invariants = resp.modules[0].declarations.filter((
+        d: { type: string; name: string },
+      ) => d.type === "Bool" || d.type === "(() => Bool)").map((
+        d: { name: string },
+      ) => d.name).filter((d: string) => d !== "Init" && d !== "Next");
       console.log(invariants);
       return Response.json(invariants);
     } else {

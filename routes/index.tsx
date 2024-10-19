@@ -41,7 +41,7 @@ Invariant == ~CounterExampleProperty
 export default function Body() {
   const exampleTla = {
     tla: EXAMPLE_TLA,
-    invs: ["Init", "Next", "CounterExampleProperty", "Invariant"],
+    invs: ["CounterExampleProperty", "Invariant"],
     inv: "Invariant",
     out: "> TLA+ Playground with Apalache",
   };
