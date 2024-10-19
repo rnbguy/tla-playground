@@ -306,7 +306,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   let editor = null;
 
   useEffect(() => {
-    let initTla = JSON.parse(localStorage.getItem("tla-snippet")) ?? props;
+    let initTla = JSON.parse(localStorage.getItem("tla-snippet")!) ?? props;
     if (initTla.tla.length === 0) {
       initTla = props;
     }
@@ -346,8 +346,8 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           overviewRulerLanes: 0,
         });
 
-        if (window.location.hash) {
-          const gistId = window.location.hash.substring(1);
+        if (globalThis.location.hash) {
+          const gistId = globalThis.location.hash.substring(1);
           fetch(`https://api.github.com/gists/${gistId}`)
             .then((value) => value.json())
             .then((json) => {
@@ -355,7 +355,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             })
             .catch((error) => {
               console.error(error);
-              window.location.hash = "";
+              globalThis.location.hash = "";
               editor.setValue(initTla.tla.trimStart());
             });
         } else {
