@@ -1,6 +1,5 @@
-import { Untar } from "@std/archive";
-import { readerFromStreamReader } from "@std/io";
-import { copy } from "@std/io";
+import { UntarStream } from "@std/tar";
+import { type TarStreamEntry } from "@std/tar/untar-stream";
 import { cache } from "cache/mod.ts";
 import { promisify } from "node:util";
 import { default as protobuf } from "protobufjs";
@@ -80,20 +79,17 @@ export class Apalache {
     const urlPath =
       `https://github.com/informalsystems/apalache/releases/download/v${this.version}/apalache-${this.version}.tgz`;
     const tgzFile = await cache(urlPath);
-    const file = await Deno.open(tgzFile.path);
-    const reader = readerFromStreamReader(
-      file.readable.pipeThrough(new DecompressionStream("gzip")).getReader(),
-    );
-    const untar = new Untar(reader);
 
-    for await (const entry of untar) {
+    for await (
+      const entry of (await Deno.open(tgzFile.path))
+        .readable
+        .pipeThrough(new DecompressionStream("gzip"))
+        .pipeThrough(new UntarStream()) as AsyncIterable<TarStreamEntry>
+    ) {
       if (entry.type === "file" && entry.fileName.endsWith(TGZ_JAR_NAME)) {
-        const file = await Deno.open(this.getJarName(), {
-          create: true,
-          write: true,
-        });
-        await copy(entry, file);
-        file.close();
+        await entry.readable?.pipeTo(
+          (await Deno.create(this.getJarName())).writable,
+        );
         break;
       }
     }
