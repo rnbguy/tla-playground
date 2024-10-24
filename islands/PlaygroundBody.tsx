@@ -372,23 +372,27 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         setInterval(async () => {
           const tla = editor.getValue();
 
-          const invariants = await tlaInvariants({ tla });
+          const storedTla = JSON.parse(localStorage.getItem("tla-snippet")!);
 
-          allInvs.value = invariants;
+          if (storedTla && storedTla.tla !== tla) {
+            const invariants = await tlaInvariants({ tla });
 
-          if (!invariants.includes(selectedInv.value)) {
-            selectedInv.value = invariants[invariants.length - 1];
+            allInvs.value = invariants;
+
+            if (!invariants.includes(selectedInv.value)) {
+              selectedInv.value = invariants[invariants.length - 1];
+            }
+
+            localStorage.setItem(
+              "tla-snippet",
+              JSON.stringify({
+                tla,
+                invs: allInvs.value,
+                inv: selectedInv.value,
+                out: consoleText.value,
+              }),
+            );
           }
-
-          localStorage.setItem(
-            "tla-snippet",
-            JSON.stringify({
-              tla,
-              invs: allInvs.value,
-              inv: selectedInv.value,
-              out: consoleText.value,
-            }),
-          );
         }, 2000);
       },
     );
