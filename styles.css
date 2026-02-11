@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Iosevka";
+  src: url("@fontsource/iosevka/files/iosevka-latin-400-normal.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --app-bg: #fcfcfd;
+  --app-fg: #111113;
+  --app-panel: #f8f8fa;
+  --app-border: #dfe1e6;
+  --app-control-bg: #f1f2f5;
+  --app-control-fg: #2f3033;
+  --app-accent: #5b5bd6;
+  --app-accent-fg: #fcfcff;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #111113;
+  --app-fg: #edeef0;
+  --app-panel: #19191b;
+  --app-border: #393a3f;
+  --app-control-bg: #222327;
+  --app-control-fg: #edeef0;
+  --app-accent: #7c7cff;
+  --app-accent-fg: #f1f1ff;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-fg);
+}

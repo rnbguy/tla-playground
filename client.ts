@@ -1,0 +1,10 @@
+import "./styles.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "@fontsource/fira-code/latin-400.css";
+import "@fontsource/inconsolata/latin-400.css";
+import "@fontsource/source-code-pro/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/space-mono/latin-400.css";
+import "@fontsource/ubuntu-mono/latin-400.css";
+import "@fontsource/roboto-mono/latin-400.css";
+import "@fontsource/anonymous-pro/latin-400.css";
