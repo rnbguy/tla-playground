@@ -19,8 +19,6 @@ export default function Playground(props: PlaygroundProps) {
           href="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.css"
         />
         <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js" />
-        <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.nls.js" />
-        <script src="https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.js" />
       </Head>
       <body>
         <PlaygroundBody {...props} />

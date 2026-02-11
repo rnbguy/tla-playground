@@ -1,10 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import { computed, signal } from "@preact/signals";
-import {
-  IconBrandGithub as GithubIcon,
-  IconLemon2 as LemonIcon,
-  IconMountain,
-} from "npm:@tabler/icons-react@^3.36.1";
+import { Citrus, Github, Mountain } from "npm:lucide-preact@^0.542.0";
 import * as yaml from "@std/yaml";
 
 interface PlaygroundProps {
@@ -320,7 +316,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     });
 
     require(
-      ["vs/editor/editor.main", "vs/editor/editor.main.nls"],
+      ["vs/editor/editor.main"],
       function (monaco) {
         monaco.languages.register({ id: "tla" });
 
@@ -509,7 +505,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>Apalache {}</span>
-              <IconMountain size={16} />
+              <Mountain size={16} strokeWidth={2} />
             </a>
             <span>{} and {}</span>
             <a
@@ -519,7 +515,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>Fresh {}</span>
-              <LemonIcon size={16} />
+              <Citrus size={16} strokeWidth={2} />
             </a>
           </div>
           <div class="pl-2">
@@ -530,7 +526,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>View Source {}</span>
-              <GithubIcon size={16} />
+              <Github size={16} strokeWidth={2} />
             </a>
           </div>
         </div>
