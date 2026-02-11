@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { computed, signal } from "@preact/signals";
-import LemonIcon from "icons/lemon-2.tsx";
-import GithubIcon from "icons/brand-github.tsx";
-import IconMountain from "icons/mountain.tsx";
+import {
+  IconBrandGithub as GithubIcon,
+  IconLemon2 as LemonIcon,
+  IconMountain,
+} from "npm:@tabler/icons-react@^3.36.1";
 import * as yaml from "@std/yaml";
 
 interface PlaygroundProps {
@@ -507,7 +509,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>Apalache {}</span>
-              <IconMountain alt="GitHub logo" />
+              <IconMountain size={16} />
             </a>
             <span>{} and {}</span>
             <a
@@ -517,7 +519,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>Fresh {}</span>
-              <LemonIcon alt="Fresh logo" />
+              <LemonIcon size={16} />
             </a>
           </div>
           <div class="pl-2">
@@ -528,7 +530,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               target="_blank"
             >
               <span>View Source {}</span>
-              <GithubIcon alt="GitHub logo" />
+              <GithubIcon size={16} />
             </a>
           </div>
         </div>
