@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
 import { computed, signal } from "@preact/signals";
-import { Citrus, Github, Mountain } from "npm:lucide-preact@^0.542.0";
 import * as yaml from "@std/yaml";
 
 interface PlaygroundProps {
@@ -8,6 +7,64 @@ interface PlaygroundProps {
   invs: string[];
   inv: string;
   out: string;
+}
+
+function MountainIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="m8 3 4 8 5-5 4 15H3z" />
+      <path d="m4 18 5-6 3 4" />
+    </svg>
+  );
+}
+
+function CitrusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 4v16" />
+      <path d="M4 12h16" />
+    </svg>
+  );
+}
+
+function GithubIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path d="M9 19c-5 1.5-5-2.5-7-3" />
+      <path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7A5.2 5.2 0 0 0 18.7 5 4.8 4.8 0 0 0 18.6 1s-1.1-.3-3.6 1.4a12.3 12.3 0 0 0-6 0C6.5.7 5.4 1 5.4 1A4.8 4.8 0 0 0 5.3 5 5.2 5.2 0 0 0 4 8.8c0 5.2 3.1 6.4 6.1 6.7a3.4 3.4 0 0 0-.9 2.6V22" />
+    </svg>
+  );
 }
 
 class Spinner {
@@ -497,25 +554,25 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
         <div class="flex flex-row divide-x-2 space-x-2 whitespace-pre">
           <div class="flex flex-row">
-            <span>Made with {}</span>
+              <span>Made with </span>
             <a
               class="flex flex-row hover:(opacity-70)"
               href="https://apalache.informal.systems"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Apalache {}</span>
-              <Mountain size={16} strokeWidth={2} />
+              <span>Apalache </span>
+              <MountainIcon />
             </a>
-            <span>{} and {}</span>
+              <span> and </span>
             <a
               class="flex flex-row hover:(opacity-70)"
               href="https://fresh.deno.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Fresh {}</span>
-              <Citrus size={16} strokeWidth={2} />
+              <span>Fresh </span>
+              <CitrusIcon />
             </a>
           </div>
           <div class="pl-2">
@@ -525,8 +582,8 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>View Source {}</span>
-              <Github size={16} strokeWidth={2} />
+              <span>View Source </span>
+              <GithubIcon />
             </a>
           </div>
         </div>

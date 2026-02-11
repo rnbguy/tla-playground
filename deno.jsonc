@@ -1,28 +1,48 @@
 {
   "tasks": {
-    "start": "deno run -A --watch=static/,routes/ dev.ts",
-    "update": "deno run -A -r https://fresh.deno.dev/update . && deno fmt",
-    "build": "deno run -A dev.ts build",
-    "preview": "deno run -A main.ts"
+    "check": "deno fmt --check && deno lint && deno check **/*.ts && deno check **/*.tsx",
+    "dev": "vite",
+    "build": "vite build",
+    "start": "deno serve -A _fresh/server.js",
+    "update": "deno run -A -r jsr:@fresh/update ."
   },
-  "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "preact" },
+  "compilerOptions": {
+    "jsx": "precompile",
+    "jsxImportSource": "preact",
+    "jsxPrecompileSkipElements": [
+      "a",
+      "img",
+      "source",
+      "body",
+      "html",
+      "head",
+      "title",
+      "meta",
+      "script",
+      "link",
+      "style",
+      "base",
+      "noscript",
+      "template"
+    ],
+    "types": ["vite/client"]
+  },
   "nodeModulesDir": "auto",
   "imports": {
-    "$fresh/": "https://deno.land/x/fresh@1.7.3/",
     "@grpc/grpc-js": "npm:@grpc/grpc-js@^1.12.2",
     "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.7.13",
-    "@preact/signals": "npm:@preact/signals@^1.3.1",
-    "@preact/signals-core": "npm:@preact/signals-core@1.8.0",
+    "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.0.8",
+    "@preact/signals": "npm:@preact/signals@^2.5.0",
+    "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.13",
+    "@fontsource/": "npm:@fontsource/",
     "@std/tar": "jsr:@std/tar@^0.1.4",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "cache/mod.ts": "jsr:@denosaurs/cache@^0.2.15",
-    "preact": "npm:preact@^10.25.0",
-    "preact/hooks": "npm:preact@^10.25.0/hooks",
-    "preact-render-to-string": "npm:preact-render-to-string@^6.5.11",
+    "preact": "npm:preact@10.27.2",
     "protobufjs": "npm:protobufjs@^7.4.0",
-    "tailwindcss": "npm:tailwindcss@^3.4.15",
-    "tailwindcss/plugin": "npm:tailwindcss@3.4.15/plugin.js",
-    "preact/": "npm:preact@^10.25.0/"
+    "tailwindcss": "npm:tailwindcss@^4.1.13",
+    "fresh": "jsr:@fresh/core@^2.2.0",
+    "vite": "npm:vite@^7.3.1"
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
   "exclude": ["**/_fresh/*"]

@@ -3,7 +3,7 @@ import { Apalache } from "../utils/apalache.ts";
 const config = Deno.env.toObject();
 
 export const handler = {
-  async GET(_req: Request): Promise<Response> {
+  async GET(): Promise<Response> {
     let [apalacheHostname, apalachePort] = ["localhost", 8822];
 
     if (config["APALACHE_ENDPOINT"]) {

@@ -1,9 +1,11 @@
 import { Apalache } from "../utils/apalache.ts";
+import { FreshContext } from "fresh";
 
 const config = Deno.env.toObject();
 
 export const handler = {
-  async POST(req: Request): Promise<Response> {
+  async POST(ctx: FreshContext): Promise<Response> {
+    const req = ctx.req;
     const jsonData = await req.json();
 
     let [apalacheHostname, apalachePort] = ["localhost", 8822];
