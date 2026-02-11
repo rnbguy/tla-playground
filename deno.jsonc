@@ -21,7 +21,8 @@
     "preact-render-to-string": "npm:preact-render-to-string@^6.5.11",
     "protobufjs": "npm:protobufjs@^7.4.0",
     "tailwindcss": "npm:tailwindcss@^3.4.15",
-    "tailwindcss/plugin": "npm:tailwindcss@3.4.15/plugin.js"
+    "tailwindcss/plugin": "npm:tailwindcss@3.4.15/plugin.js",
+    "preact/": "npm:preact@^10.25.0/"
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
   "exclude": ["**/_fresh/*"]
