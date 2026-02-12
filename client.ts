@@ -1,4 +1,4 @@
-import "./styles.css";
+import "./assets/styles.css";
 import "@fontsource/jetbrains-mono/latin-400.css";
 import "@fontsource/fira-code/latin-400.css";
 import "@fontsource/inconsolata/latin-400.css";
