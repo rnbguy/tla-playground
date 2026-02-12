@@ -501,6 +501,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             readOnly: false,
             automaticLayout: true,
             contextmenu: true,
+            fontFamily: "Fira Code, monospace",
             fontSize: 14,
             lineHeight: 18,
             lineNumbersMinChars: 2,
