@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
-import { computed, signal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import * as yaml from "@std/yaml";
 
 interface PlaygroundProps {
@@ -11,8 +11,28 @@ interface PlaygroundProps {
 
 type PingResponse =
   | { status: "ok" }
-  | { status: "error"; message?: string; error?: string };
+  | {
+    status: "error";
+    message: string;
+    source: "frontend error" | "frontend api error" | "apalache server down";
+  };
 type VerifyResponse = Record<string, unknown>;
+
+function extractApiMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.message === "string") {
+    return record.message;
+  }
+  if (typeof record.error === "string") {
+    return record.error;
+  }
+
+  return null;
+}
 
 type MonacoEditor = {
   getValue: () => string;
@@ -419,37 +439,12 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const editor = useRef<MonacoEditor | null>(null);
   const pollingTimerRef = useRef<number | null>(null);
 
-  const loadingText = signal("");
-  const consoleText = signal("");
-  const errorText = signal("");
+  const loadingText = useSignal("");
+  const consoleText = useSignal(props.out);
+  const errorText = useSignal("");
 
-  const selectedInv = signal("");
-  const allInvs = signal<string[]>([]);
-
-  const allInvsOption = computed(() => {
-    const options = [
-      <option
-        key="placeholder"
-        value=""
-        disabled
-        selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
-      >
-        Select an invariant
-      </option>,
-    ];
-
-    if (allInvs.value && allInvs.value.length > 0) {
-      options.push(
-        ...allInvs.value.map((inv) => (
-          <option value={inv} key={inv}>
-            {inv}
-          </option>
-        )),
-      );
-    }
-
-    return options;
-  });
+  const selectedInv = useSignal(props.inv);
+  const allInvs = useSignal<string[]>(props.invs);
   useEffect(() => {
     let isDisposed = false;
 
@@ -458,7 +453,12 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     if (rawStoredSnippet) {
       try {
         const parsed = JSON.parse(rawStoredSnippet) as PlaygroundProps;
-        if (parsed.tla.length > 0) {
+        if (
+          parsed.tla.length > 0 &&
+          Array.isArray(parsed.invs) &&
+          parsed.invs.length > 0 &&
+          typeof parsed.inv === "string"
+        ) {
           initTla = parsed;
         }
       } catch {
@@ -599,31 +599,56 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   async function ping(): Promise<PingResponse> {
     try {
-      return await fetch("/api/ping", {
+      const response = await fetch("/api/ping", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-      }).then((resp) => resp.json() as Promise<PingResponse>);
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        const message = extractApiMessage(payload) ??
+          `Ping API failed with status ${response.status}`;
+        const source = message.includes("Apalache server unavailable")
+          ? "apalache server down"
+          : "frontend api error";
+        console.error(`[${source}] ${message}`);
+        return { status: "error", message, source };
+      }
+
+      return payload as PingResponse;
     } catch (error) {
+      console.error("[frontend error] Failed to call /api/ping", error);
       return {
         status: "error",
         message: error instanceof Error ? error.message : String(error),
+        source: "frontend error",
       };
     }
   }
 
   async function tlaInvariants(data: { tla: string }): Promise<string[]> {
     try {
-      return await fetch("/api/invariants", {
+      const response = await fetch("/api/invariants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }).then((resp) => resp.json());
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        const message = extractApiMessage(payload) ??
+          `Invariants API failed with status ${response.status}`;
+        console.error(`[frontend api error] ${message}`);
+        return [];
+      }
+
+      return await response.json();
     } catch (error) {
-      console.error(error);
+      console.error("[frontend error] Failed to call /api/invariants", error);
       return [];
     }
   }
@@ -632,14 +657,24 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     data: { tla: string; inv: string },
   ): Promise<VerifyResponse> {
     try {
-      return await fetch("/api/verify", {
+      const response = await fetch("/api/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }).then((resp) => resp.json() as Promise<VerifyResponse>);
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        const message = extractApiMessage(payload) ??
+          `Verify API failed with status ${response.status}`;
+        console.error(`[frontend api error] ${message}`);
+      }
+
+      return payload as VerifyResponse;
     } catch (error) {
+      console.error("[frontend error] Failed to call /api/verify", error);
       return { error: error instanceof Error ? error.message : String(error) };
     }
   }
@@ -655,7 +690,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     const pingResp = await ping();
     if (pingResp.status !== "ok") {
       consoleText.value = "";
-      errorText.value = "> Apalache server is down !";
+      errorText.value = `> ${pingResp.message}`;
       return;
     }
 
@@ -663,24 +698,37 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
     allInvs.value = invariants;
 
-    if (invariants.includes(selectedInv.value)) {
-      // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
-      const spinner = new Spinner(["...", " ..", ". .", ".. "]);
-      errorText.value = "";
+    const invariantToVerify = invariants.includes(selectedInv.value)
+      ? selectedInv.value
+      : (invariants[0] ?? "");
+
+    if (!invariantToVerify) {
       consoleText.value = "";
-
-      const spinnerTimer = globalThis.setInterval(() => {
-        loadingText.value = `> processing ${spinner.next()}`;
-      }, 200);
-      consoleText.value = "";
-      const data = { tla, inv: selectedInv.value };
-      const respJson = await tlaVerify(data);
-
-      globalThis.clearInterval(spinnerTimer);
-      loadingText.value = "";
-
-      consoleText.value = yaml.stringify(respJson, { indent: 2 });
+      errorText.value = "> No invariant available to verify";
+      return;
     }
+
+    selectedInv.value = invariantToVerify;
+
+    // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
+    const spinner = new Spinner(["...", " ..", ". .", ".. "]);
+    errorText.value = "";
+    consoleText.value = "";
+
+    const spinnerTimer = globalThis.setInterval(() => {
+      loadingText.value = `> processing ${spinner.next()}`;
+    }, 200);
+    consoleText.value = "";
+    const data = { tla, inv: invariantToVerify };
+    const respJson = await tlaVerify(data);
+
+    globalThis.clearInterval(spinnerTimer);
+    loadingText.value = "";
+
+    const rendered = yaml.stringify(respJson, { indent: 2 }).trim();
+    consoleText.value = rendered.length > 0
+      ? rendered
+      : JSON.stringify(respJson, null, 2);
   };
 
   return (
@@ -693,7 +741,18 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             selectedInv.value = e.currentTarget.value;
           }}
         >
-          {allInvsOption}
+          <option
+            key="placeholder"
+            value=""
+            disabled
+          >
+            Select an invariant
+          </option>
+          {allInvs.value.map((inv) => (
+            <option value={inv} key={inv}>
+              {inv}
+            </option>
+          ))}
         </select>
         <button
           type="button"

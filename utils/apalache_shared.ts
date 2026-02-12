@@ -43,3 +43,12 @@ export function getSharedApalache(): Promise<Apalache> {
 
   return sharedApalachePromise;
 }
+
+export function resetSharedApalache(): void {
+  sharedApalachePromise = null;
+}
+
+export async function refreshSharedApalache(): Promise<Apalache> {
+  resetSharedApalache();
+  return await getSharedApalache();
+}
