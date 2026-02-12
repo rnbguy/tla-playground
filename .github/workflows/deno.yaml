@@ -32,3 +32,49 @@ jobs:
 
       - name: Build
         run: deno task build
+
+  apalache-integration:
+    name: Apalache Integration
+    runs-on: ubuntu-latest
+    env:
+      APALACHE_VERSION: 0.52.2
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download Apalache release
+        run: |
+          curl -fL "https://github.com/apalache-mc/apalache/releases/download/v${APALACHE_VERSION}/apalache-${APALACHE_VERSION}.tgz" -o apalache.tgz
+          tar -xzf apalache.tgz
+
+      - name: Show versions
+        run: |
+          deno --version
+          java --version
+
+      - name: Build app
+        run: deno task build
+
+      - name: Run Apalache-backed integration test
+        run: |
+          java -jar "apalache-${APALACHE_VERSION}/lib/apalache.jar" server >/tmp/apalache.log 2>&1 &
+          APALACHE_PID=$!
+          APALACHE_ENDPOINT=localhost:8822 deno task start >/tmp/app.log 2>&1 &
+          APP_PID=$!
+          sleep 6
+          curl -fSs http://127.0.0.1:8000/api/ping
+          E2E_BASE_URL=http://127.0.0.1:8000 deno test tests/e2e/verify_output.test.ts --allow-env --allow-net --allow-read
+          kill $APP_PID $APALACHE_PID
+          wait $APP_PID 2>/dev/null || true
+          wait $APALACHE_PID 2>/dev/null || true
