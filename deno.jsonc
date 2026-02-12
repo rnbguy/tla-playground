@@ -1,9 +1,10 @@
 {
   "tasks": {
-    "check": "deno fmt --check && deno lint && deno check **/*.ts && deno check **/*.tsx",
+    "check": "deno fmt --check && deno lint && deno check && deno test --allow-env --allow-net --allow-read",
     "dev": "vite",
     "build": "vite build",
-    "start": "deno serve -A _fresh/server.js",
+    "start": "deno serve --allow-net --allow-env --allow-read _fresh/server.js",
+    "test": "deno test --allow-env --allow-net --allow-read",
     "update": "deno run -A -r jsr:@fresh/update ."
   },
   "compilerOptions": {
@@ -37,15 +38,7 @@
     "@preact/signals": "npm:@preact/signals@^2.5.0",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.13",
     "@fontsource/": "npm:@fontsource/",
-    "@fontsource/jetbrains-mono": "npm:@fontsource/jetbrains-mono",
     "@fontsource/fira-code": "npm:@fontsource/fira-code",
-    "@fontsource/inconsolata": "npm:@fontsource/inconsolata",
-    "@fontsource/source-code-pro": "npm:@fontsource/source-code-pro",
-    "@fontsource/ibm-plex-mono": "npm:@fontsource/ibm-plex-mono",
-    "@fontsource/space-mono": "npm:@fontsource/space-mono",
-    "@fontsource/ubuntu-mono": "npm:@fontsource/ubuntu-mono",
-    "@fontsource/roboto-mono": "npm:@fontsource/roboto-mono",
-    "@fontsource/anonymous-pro": "npm:@fontsource/anonymous-pro",
     "@std/tar": "jsr:@std/tar@^0.1.4",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "cache/mod.ts": "jsr:@denosaurs/cache@^0.2.15",
