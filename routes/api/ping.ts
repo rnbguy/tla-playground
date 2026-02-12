@@ -1,8 +1,10 @@
 import { define } from "../../utils.ts";
 import { refreshSharedApalache } from "../../utils/apalache_shared.ts";
+import { apiErrorResponse } from "../../utils/api_request.ts";
 
 export const handler = define.handlers({
   async GET(ctx): Promise<Response> {
+    const requestId = ctx.state.requestId;
     let apalache = ctx.state.apalache;
 
     try {
@@ -20,7 +22,7 @@ export const handler = define.handlers({
         return Response.json({ status: "ok" });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        return Response.json({ status: "error", message }, { status: 503 });
+        return apiErrorResponse(503, message, requestId);
       }
     }
   },
