@@ -1,27 +1,12 @@
-import { Apalache } from "../../utils/apalache.ts";
-import { FreshContext } from "fresh";
+import { define } from "../../utils.ts";
 
-const config = Deno.env.toObject();
-
-export const handler = {
-  async POST(ctx: FreshContext): Promise<Response> {
+export const handler = define.handlers({
+  async POST(ctx): Promise<Response> {
     const req = ctx.req;
     const jsonData = await req.json();
 
     const bmcLength = 10;
-
-    let [apalacheHostname, apalachePort] = ["localhost", 8822];
-
-    if (config["APALACHE_ENDPOINT"]) {
-      const apalacheEndpoint = config["APALACHE_ENDPOINT"];
-      const splitIndex = apalacheEndpoint.indexOf(":");
-      apalacheHostname = apalacheEndpoint.slice(0, splitIndex);
-      apalachePort = parseInt(apalacheEndpoint.slice(splitIndex + 1));
-    }
-
-    const apalache = new Apalache();
-    await apalache.setVersion("0.40.7");
-    await apalache.setClient(apalacheHostname, apalachePort);
+    const apalache = ctx.state.apalache;
     const respJson = await apalache.modelCheck(
       jsonData.tla,
       jsonData.inv,
@@ -61,4 +46,4 @@ export const handler = {
 
     return Response.json(outJson);
   },
-};
+});

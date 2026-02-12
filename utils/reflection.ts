@@ -46,13 +46,30 @@ const grpcStubOptions = {
   oneofs: true,
 };
 
+let reflectionPackagePromise: Promise<proto.PackageDefinition> | null = null;
+
+async function getReflectionPackageDefinition(): Promise<proto.PackageDefinition> {
+  if (!reflectionPackagePromise) {
+    reflectionPackagePromise = (async () => {
+      const response = await fetch(PROTO_URL, {
+        signal: AbortSignal.timeout(5000),
+      });
+      const source = await response.text();
+      const protoJson = protobuf.parse(source, grpcStubOptions).root.toJSON();
+      return proto.fromJSON(protoJson, grpcStubOptions);
+    })().catch((error) => {
+      reflectionPackagePromise = null;
+      throw error;
+    });
+  }
+
+  return reflectionPackagePromise;
+}
+
 export async function getReflectionClient(
   connectionOption: Deno.ConnectOptions,
 ): Promise<ServerReflectionService> {
-  const response = await fetch(PROTO_URL);
-  const protoJson = protobuf.parse(await response.text(), grpcStubOptions).root
-    .toJSON();
-  const packageDefinition = proto.fromJSON(protoJson, grpcStubOptions);
+  const packageDefinition = await getReflectionPackageDefinition();
   // const packageDefinition = proto.loadSync(protoLocalPath, grpcStubOptions);
   const reflectionProtoDescriptor = grpc.loadPackageDefinition(
     packageDefinition,
