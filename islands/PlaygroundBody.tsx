@@ -169,6 +169,11 @@ type MonacoNamespace = {
   };
 };
 
+const MONACO_VERSION = "0.52.0";
+const MONACO_ESM = `https://esm.sh/monaco-editor@${MONACO_VERSION}`;
+const MONACO_CSS =
+  `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/min/vs/editor/editor.main.css`;
+
 let monacoLoadPromise: Promise<MonacoNamespace> | null = null;
 let shikiMonacoThemePromise: Promise<void> | null = null;
 let shikiHighlighter: import("@shikijs/core").HighlighterCore | null = null;
@@ -176,18 +181,23 @@ let shikiHighlighter: import("@shikijs/core").HighlighterCore | null = null;
 function loadMonaco(): Promise<MonacoNamespace> {
   if (!monacoLoadPromise) {
     monacoLoadPromise = (async () => {
+      if (!document.querySelector(`link[href="${MONACO_CSS}"]`)) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = MONACO_CSS;
+        document.head.appendChild(link);
+      }
+
       (globalThis as Record<string, unknown>).MonacoEnvironment = {
         getWorker() {
-          return new Worker(
-            new URL(
-              "monaco-editor/esm/vs/editor/editor.worker.js",
-              import.meta.url,
-            ),
-            { type: "module" },
+          const blob = new Blob(
+            [`import "${MONACO_ESM}/esm/vs/editor/editor.worker.js";`],
+            { type: "application/javascript" },
           );
+          return new Worker(URL.createObjectURL(blob), { type: "module" });
         },
       };
-      const monaco = await import("monaco-editor");
+      const monaco = await import(/* @vite-ignore */ MONACO_ESM);
       return monaco as unknown as MonacoNamespace;
     })().catch((error) => {
       monacoLoadPromise = null;
