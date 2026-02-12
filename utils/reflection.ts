@@ -7,7 +7,6 @@ import * as proto from "@grpc/proto-loader";
 
 const PROTO_URL =
   "https://github.com/grpc/grpc/raw/master/src/proto/grpc/reflection/v1alpha/reflection.proto";
-// const GRPC_REFLECTION_SERVICE_NAME = "grpc.reflection.v1alpha.ServerReflection";
 
 // Types of the gRPC interface.
 type ServerReflectionRequest = { file_containing_symbol: string };
@@ -70,7 +69,6 @@ export async function getReflectionClient(
   connectionOption: Deno.ConnectOptions,
 ): Promise<ServerReflectionService> {
   const packageDefinition = await getReflectionPackageDefinition();
-  // const packageDefinition = proto.loadSync(protoLocalPath, grpcStubOptions);
   const reflectionProtoDescriptor = grpc.loadPackageDefinition(
     packageDefinition,
   ) as unknown as ServerReflectionPkg;

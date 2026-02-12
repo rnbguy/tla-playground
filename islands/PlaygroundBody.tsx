@@ -2,12 +2,10 @@ import { useEffect, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import * as yaml from "@std/yaml";
 import { Moon, Palette, Play, Sun, Type } from "lucide-preact";
-import {
-  IconBrandDeno,
-  IconBrandGithub,
-  IconLemon,
-  IconMountain,
-} from "@tabler/icons-preact";
+import IconBrandDeno from "@tabler/icons-preact/IconBrandDeno.mjs";
+import IconBrandGithub from "@tabler/icons-preact/IconBrandGithub.mjs";
+import IconLemon from "@tabler/icons-preact/IconLemon.mjs";
+import IconMountain from "@tabler/icons-preact/IconMountain.mjs";
 
 interface PlaygroundProps {
   tla: string;
@@ -177,82 +175,71 @@ type MonacoNamespace = {
   };
 };
 
-type MonacoRequire = {
-  config: (config: { paths: { vs: string } }) => void;
-  (deps: string[], callback: (monaco: MonacoNamespace) => void): void;
-};
-
-let monacoLoaderPromise: Promise<void> | null = null;
+let monacoLoadPromise: Promise<MonacoNamespace> | null = null;
 let shikiMonacoThemePromise: Promise<void> | null = null;
-let shikiHighlighter: import("shiki").Highlighter | null = null;
+let shikiHighlighter: import("@shikijs/core").HighlighterCore | null = null;
 
-function loadMonacoLoader(): Promise<void> {
-  if (!monacoLoaderPromise) {
-    monacoLoaderPromise = new Promise<void>((resolve, reject) => {
-      const runtime = globalThis as unknown as { require?: MonacoRequire };
-      if (typeof runtime.require === "function") {
-        resolve();
-        return;
-      }
-
-      if (!document.getElementById("monaco-editor-main-css")) {
-        const css = document.createElement("link");
-        css.id = "monaco-editor-main-css";
-        css.rel = "stylesheet";
-        css.href =
-          "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.css";
-        document.head.appendChild(css);
-      }
-
-      const existingScript = document.getElementById("monaco-loader-script");
-      if (existingScript) {
-        existingScript.addEventListener("load", () => resolve(), {
-          once: true,
-        });
-        existingScript.addEventListener(
-          "error",
-          () => reject(new Error("Failed to load Monaco loader")),
-          {
-            once: true,
-          },
-        );
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.id = "monaco-loader-script";
-      script.src =
-        "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js";
-      script.async = true;
-      script.addEventListener("load", () => resolve(), { once: true });
-      script.addEventListener(
-        "error",
-        () => reject(new Error("Failed to load Monaco loader")),
-        {
-          once: true,
+function loadMonaco(): Promise<MonacoNamespace> {
+  if (!monacoLoadPromise) {
+    monacoLoadPromise = (async () => {
+      (globalThis as Record<string, unknown>).MonacoEnvironment = {
+        getWorker() {
+          return new Worker(
+            new URL(
+              "monaco-editor/esm/vs/editor/editor.worker.js",
+              import.meta.url,
+            ),
+            { type: "module" },
+          );
         },
-      );
-      document.head.appendChild(script);
-    }).catch((error) => {
-      monacoLoaderPromise = null;
+      };
+      const monaco = await import("monaco-editor");
+      return monaco as unknown as MonacoNamespace;
+    })().catch((error) => {
+      monacoLoadPromise = null;
       throw error;
     });
   }
 
-  return monacoLoaderPromise;
+  return monacoLoadPromise;
 }
 
 async function setupShikiThemes(monaco: MonacoNamespace): Promise<void> {
   if (!shikiMonacoThemePromise) {
     shikiMonacoThemePromise = (async () => {
-      const [{ createHighlighter }, { shikiToMonaco }] = await Promise.all([
-        import("shiki"),
+      const [{ createHighlighterCore }, { createJavaScriptRegexEngine }, {
+        shikiToMonaco,
+      }] = await Promise.all([
+        import("@shikijs/core"),
+        import("@shikijs/engine-javascript"),
         import("@shikijs/monaco"),
       ]);
 
-      const highlighter = await createHighlighter({
-        themes: SHIKI_THEMES,
-        langs: ["plaintext"],
+      const highlighter = await createHighlighterCore({
+        themes: [
+          import("@shikijs/themes/vitesse-light"),
+          import("@shikijs/themes/vitesse-dark"),
+          import("@shikijs/themes/github-light"),
+          import("@shikijs/themes/github-dark"),
+          import("@shikijs/themes/night-owl-light"),
+          import("@shikijs/themes/night-owl"),
+          import("@shikijs/themes/rose-pine-dawn"),
+          import("@shikijs/themes/rose-pine-moon"),
+          import("@shikijs/themes/catppuccin-latte"),
+          import("@shikijs/themes/catppuccin-mocha"),
+          import("@shikijs/themes/solarized-light"),
+          import("@shikijs/themes/solarized-dark"),
+          import("@shikijs/themes/light-plus"),
+          import("@shikijs/themes/dark-plus"),
+          import("@shikijs/themes/one-light"),
+          import("@shikijs/themes/one-dark-pro"),
+          import("@shikijs/themes/gruvbox-light-medium"),
+          import("@shikijs/themes/gruvbox-dark-medium"),
+          import("@shikijs/themes/kanagawa-lotus"),
+          import("@shikijs/themes/kanagawa-wave"),
+        ],
+        langs: [],
+        engine: createJavaScriptRegexEngine(),
       });
 
       shikiToMonaco(highlighter, monaco);
@@ -304,7 +291,7 @@ type ThemePalette = {
 };
 
 function pickThemeColor(
-  theme: import("shiki").ThemeRegistrationResolved,
+  theme: import("@shikijs/core").ThemeRegistrationResolved,
   keys: string[],
   fallback: string,
 ): string {
@@ -318,7 +305,7 @@ function pickThemeColor(
 }
 
 function buildThemePalette(
-  theme: import("shiki").ThemeRegistrationResolved,
+  theme: import("@shikijs/core").ThemeRegistrationResolved,
 ): ThemePalette {
   const bg = theme.bg || theme.colors?.["editor.background"] || "Canvas";
   const fg = theme.fg || theme.colors?.["editor.foreground"] || "CanvasText";
@@ -793,183 +780,164 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
     void renderOutput(initTla.out);
 
-    void loadMonacoLoader().then(() => {
-      if (isDisposed) {
-        return;
-      }
+    void loadMonaco().then((monaco) => {
+      void (async () => {
+        if (isDisposed || !editorRef.current) {
+          return;
+        }
 
-      const runtime = globalThis as unknown as { require?: MonacoRequire };
-      if (typeof runtime.require !== "function") {
-        errorText.value = "> Monaco loader not available";
-        return;
-      }
+        await setupShikiThemes(monaco);
+        monacoRef.current = monaco;
 
-      runtime.require.config({
-        paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
-      });
+        monaco.languages.register({ id: "tla" });
 
-      runtime.require(
-        ["vs/editor/editor.main"],
-        function (monaco: MonacoNamespace) {
-          void (async () => {
-            if (isDisposed || !editorRef.current) {
-              return;
-            }
+        monaco.languages.setMonarchTokensProvider(
+          "tla",
+          TLAPlusMonarchLanguage,
+        );
 
-            await setupShikiThemes(monaco);
-            monacoRef.current = monaco;
+        editor.current = monaco.editor.create(editorRef.current, {
+          language: "tla",
+          readOnly: false,
+          automaticLayout: true,
+          contextmenu: true,
+          fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+          fontSize: 14,
+          lineHeight: 20,
+          lineNumbersMinChars: 2,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          scrollbar: {
+            useShadows: false,
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+          },
+          overviewRulerLanes: 0,
+        });
 
-            monaco.languages.register({ id: "tla" });
+        monaco.editor.setTheme(
+          getShikiThemeName(selectedThemePair.value, darknessMode.value),
+        );
+        applyThemePalette(
+          getShikiThemeName(selectedThemePair.value, darknessMode.value),
+        );
 
-            monaco.languages.setMonarchTokensProvider(
-              "tla",
-              TLAPlusMonarchLanguage,
-            );
+        if (outputRef.current) {
+          outputEditor.current = monaco.editor.create(outputRef.current, {
+            language: "yaml",
+            readOnly: true,
+            domReadOnly: true,
+            automaticLayout: true,
+            contextmenu: false,
+            fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+            fontSize: 13,
+            lineHeight: 20,
+            lineNumbersMinChars: 2,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            overviewRulerLanes: 0,
+          });
 
-            editor.current = monaco.editor.create(editorRef.current, {
-              language: "tla",
-              readOnly: false,
-              automaticLayout: true,
-              contextmenu: true,
-              fontFamily: FONT_FAMILY_MAP[selectedFont.value],
-              fontSize: 14,
-              lineHeight: 20,
-              lineNumbersMinChars: 2,
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              smoothScrolling: true,
-              scrollbar: {
-                useShadows: false,
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10,
-              },
-              overviewRulerLanes: 0,
+          renderOutput(consoleText.value || initTla.out);
+        }
+
+        if (globalThis.location.hash) {
+          const gistId = globalThis.location.hash.substring(1);
+          fetch(`https://api.github.com/gists/${gistId}`, {
+            signal: AbortSignal.timeout(4000),
+          })
+            .then((value) => value.json())
+            .then((json) => {
+              const firstFile = Object.values(json.files)[0] as {
+                content?: string;
+              };
+              editor.current?.setValue(
+                firstFile.content ?? initTla.tla.trimStart(),
+              );
+            })
+            .catch((error) => {
+              console.error(error);
+              globalThis.location.hash = "";
+              editor.current?.setValue(initTla.tla.trimStart());
             });
+        } else {
+          editor.current.setValue(initTla.tla.trimStart());
+        }
 
-            monaco.editor.setTheme(
-              getShikiThemeName(selectedThemePair.value, darknessMode.value),
-            );
-            applyThemePalette(
-              getShikiThemeName(selectedThemePair.value, darknessMode.value),
-            );
+        editor.current.addCommand(
+          monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+          processText,
+        );
 
-            if (outputRef.current) {
-              outputEditor.current = monaco.editor.create(outputRef.current, {
-                language: "yaml",
-                readOnly: true,
-                domReadOnly: true,
-                automaticLayout: true,
-                contextmenu: false,
-                fontFamily: FONT_FAMILY_MAP[selectedFont.value],
-                fontSize: 13,
-                lineHeight: 20,
-                lineNumbersMinChars: 2,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                smoothScrolling: true,
-                overviewRulerLanes: 0,
-              });
+        allInvs.value = normalizeInvariants(initTla.invs);
+        selectedInv.value = initTla.inv;
 
-              renderOutput(consoleText.value || initTla.out);
-            }
+        const scheduleInvariantSync = () => {
+          if (editorChangeDebounceRef.current !== null) {
+            globalThis.clearTimeout(editorChangeDebounceRef.current);
+          }
 
-            if (globalThis.location.hash) {
-              const gistId = globalThis.location.hash.substring(1);
-              fetch(`https://api.github.com/gists/${gistId}`, {
-                signal: AbortSignal.timeout(4000),
-              })
-                .then((value) => value.json())
-                .then((json) => {
-                  const firstFile = Object.values(json.files)[0] as {
-                    content?: string;
-                  };
-                  editor.current?.setValue(
-                    firstFile.content ?? initTla.tla.trimStart(),
-                  );
-                })
-                .catch((error) => {
-                  console.error(error);
-                  globalThis.location.hash = "";
-                  editor.current?.setValue(initTla.tla.trimStart());
-                });
-            } else {
-              editor.current.setValue(initTla.tla.trimStart());
-            }
-
-            editor.current.addCommand(
-              monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-              processText,
-            );
-
-            allInvs.value = normalizeInvariants(initTla.invs);
-            selectedInv.value = initTla.inv;
-
-            const scheduleInvariantSync = () => {
-              if (editorChangeDebounceRef.current !== null) {
-                globalThis.clearTimeout(editorChangeDebounceRef.current);
+          editorChangeDebounceRef.current = globalThis.setTimeout(
+            async () => {
+              const currentEditor = editor.current;
+              if (!currentEditor) {
+                return;
               }
 
-              editorChangeDebounceRef.current = globalThis.setTimeout(
-                async () => {
-                  const currentEditor = editor.current;
-                  if (!currentEditor) {
-                    return;
-                  }
-
-                  const tla = currentEditor.getValue();
-                  const invariants = normalizeInvariants(
-                    await tlaInvariants({ tla }),
-                  );
-
-                  allInvs.value = invariants;
-                  if (invariants.length === 0) {
-                    selectedInv.value = "";
-                  } else if (!invariants.includes(selectedInv.value)) {
-                    selectedInv.value = invariants[0] ?? "";
-                  }
-
-                  localStorage.setItem(
-                    "tla-snippet",
-                    JSON.stringify({
-                      tla,
-                      invs: allInvs.value,
-                      inv: selectedInv.value,
-                      out: consoleText.value,
-                    }),
-                  );
-                },
-                500,
+              const tla = currentEditor.getValue();
+              const invariants = normalizeInvariants(
+                await tlaInvariants({ tla }),
               );
-            };
 
-            const changeSubscription = editor.current.onDidChangeModelContent(
-              scheduleInvariantSync,
-            );
+              allInvs.value = invariants;
+              if (invariants.length === 0) {
+                selectedInv.value = "";
+              } else if (!invariants.includes(selectedInv.value)) {
+                selectedInv.value = invariants[0] ?? "";
+              }
 
-            scheduleInvariantSync();
-
-            const previousDispose = editor.current.dispose.bind(editor.current);
-            editor.current.dispose = () => {
-              changeSubscription.dispose();
-              previousDispose();
-            };
-
-            if (outputEditor.current) {
-              const previousOutputDispose = outputEditor.current.dispose.bind(
-                outputEditor.current,
+              localStorage.setItem(
+                "tla-snippet",
+                JSON.stringify({
+                  tla,
+                  invs: allInvs.value,
+                  inv: selectedInv.value,
+                  out: consoleText.value,
+                }),
               );
-              outputEditor.current.dispose = () => {
-                previousOutputDispose();
-              };
-            }
-          })().catch((error) => {
-            const message = error instanceof Error
-              ? error.message
-              : String(error);
-            errorText.value = `> ${message}`;
-          });
-        },
-      );
+            },
+            500,
+          );
+        };
+
+        const changeSubscription = editor.current.onDidChangeModelContent(
+          scheduleInvariantSync,
+        );
+
+        scheduleInvariantSync();
+
+        const previousDispose = editor.current.dispose.bind(editor.current);
+        editor.current.dispose = () => {
+          changeSubscription.dispose();
+          previousDispose();
+        };
+
+        if (outputEditor.current) {
+          const previousOutputDispose = outputEditor.current.dispose.bind(
+            outputEditor.current,
+          );
+          outputEditor.current.dispose = () => {
+            previousOutputDispose();
+          };
+        }
+      })().catch((error) => {
+        const message = error instanceof Error
+          ? error.message
+          : String(error);
+        errorText.value = `> ${message}`;
+      });
     }).catch((error) => {
       const message = error instanceof Error ? error.message : String(error);
       errorText.value = `> ${message}`;

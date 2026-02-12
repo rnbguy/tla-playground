@@ -8,6 +8,5 @@
 # Fresh build directory
 _fresh/
 
-# npm + other dependencies
+# npm dependencies
 node_modules/
-vendor/
