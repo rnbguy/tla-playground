@@ -8,7 +8,9 @@ export const handler = define.handlers({
     const bmcLength = 10;
     const apalache = ctx.state.apalache;
     if (!apalache) {
-      return Response.json({ error: "Apalache server unavailable" }, { status: 503 });
+      return Response.json({ error: "Apalache server unavailable" }, {
+        status: 503,
+      });
     }
     const respJson = await apalache.modelCheck(
       jsonData.tla,
@@ -16,9 +18,9 @@ export const handler = define.handlers({
       bmcLength - 1,
     );
 
-    let outJson: { [k: string]: any } = {};
+    const outJson: Record<string, unknown> = {};
 
-    if (respJson.failure) {
+    if (respJson.result === "failure") {
       const parsedJson = JSON.parse(respJson.failure.data);
       if (parsedJson.msg) {
         outJson.result = parsedJson.msg;
@@ -37,7 +39,7 @@ export const handler = define.handlers({
           outJson.result = `Error in ${parsedJson.pass_name}`;
           outJson.error = parsedJson.error_data;
         } else {
-          outJson = parsedJson;
+          Object.assign(outJson, parsedJson as Record<string, unknown>);
         }
       }
     } else {

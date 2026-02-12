@@ -9,6 +9,11 @@ interface PlaygroundProps {
   out: string;
 }
 
+type PingResponse =
+  | { status: "ok" }
+  | { status: "error"; message?: string; error?: string };
+type VerifyResponse = Record<string, unknown>;
+
 type MonacoEditor = {
   getValue: () => string;
   setValue: (value: string) => void;
@@ -58,21 +63,32 @@ function loadMonacoLoader(): Promise<void> {
 
       const existingScript = document.getElementById("monaco-loader-script");
       if (existingScript) {
-        existingScript.addEventListener("load", () => resolve(), { once: true });
-        existingScript.addEventListener("error", () => reject(new Error("Failed to load Monaco loader")), {
+        existingScript.addEventListener("load", () => resolve(), {
           once: true,
         });
+        existingScript.addEventListener(
+          "error",
+          () => reject(new Error("Failed to load Monaco loader")),
+          {
+            once: true,
+          },
+        );
         return;
       }
 
       const script = document.createElement("script");
       script.id = "monaco-loader-script";
-      script.src = "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js";
+      script.src =
+        "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js";
       script.async = true;
       script.addEventListener("load", () => resolve(), { once: true });
-      script.addEventListener("error", () => reject(new Error("Failed to load Monaco loader")), {
-        once: true,
-      });
+      script.addEventListener(
+        "error",
+        () => reject(new Error("Failed to load Monaco loader")),
+        {
+          once: true,
+        },
+      );
       document.head.appendChild(script);
     }).catch((error) => {
       monacoLoaderPromise = null;
@@ -413,12 +429,13 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const allInvsOption = computed(() => {
     const options = [
       <option
+        key="placeholder"
         value=""
         disabled
-          selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
-        >
-          Select an invariant
-        </option>,
+        selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
+      >
+        Select an invariant
+      </option>,
     ];
 
     if (allInvs.value && allInvs.value.length > 0) {
@@ -475,45 +492,49 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
           monaco.languages.register({ id: "tla" });
 
-        monaco.languages.setMonarchTokensProvider(
-          "tla",
-          TLAPlusMonarchLanguage,
-        );
+          monaco.languages.setMonarchTokensProvider(
+            "tla",
+            TLAPlusMonarchLanguage,
+          );
 
           editor.current = monaco.editor.create(editorRef.current, {
-          language: "tla",
-          readOnly: false,
-          automaticLayout: true,
-          contextmenu: true,
-          fontSize: 14,
-          lineHeight: 18,
-          lineNumbersMinChars: 2,
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          scrollbar: {
-            useShadows: false,
-            verticalScrollbarSize: 10,
-            horizontalScrollbarSize: 10,
-          },
-          overviewRulerLanes: 0,
-        });
+            language: "tla",
+            readOnly: false,
+            automaticLayout: true,
+            contextmenu: true,
+            fontSize: 14,
+            lineHeight: 18,
+            lineNumbersMinChars: 2,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            scrollbar: {
+              useShadows: false,
+              verticalScrollbarSize: 10,
+              horizontalScrollbarSize: 10,
+            },
+            overviewRulerLanes: 0,
+          });
 
           if (globalThis.location.hash) {
             const gistId = globalThis.location.hash.substring(1);
             fetch(`https://api.github.com/gists/${gistId}`, {
               signal: AbortSignal.timeout(4000),
             })
-            .then((value) => value.json())
-            .then((json) => {
-              const firstFile = Object.values(json.files)[0] as { content?: string };
-              editor.current?.setValue(firstFile.content ?? initTla.tla.trimStart());
-            })
-            .catch((error) => {
-              console.error(error);
-              globalThis.location.hash = "";
-              editor.current?.setValue(initTla.tla.trimStart());
-            });
+              .then((value) => value.json())
+              .then((json) => {
+                const firstFile = Object.values(json.files)[0] as {
+                  content?: string;
+                };
+                editor.current?.setValue(
+                  firstFile.content ?? initTla.tla.trimStart(),
+                );
+              })
+              .catch((error) => {
+                console.error(error);
+                globalThis.location.hash = "";
+                editor.current?.setValue(initTla.tla.trimStart());
+              });
           } else {
             editor.current.setValue(initTla.tla.trimStart());
           }
@@ -534,7 +555,9 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
             const tla = currentEditor.getValue();
             const storedSnippet = localStorage.getItem("tla-snippet");
-            const storedTla = storedSnippet ? JSON.parse(storedSnippet) as { tla?: string } : null;
+            const storedTla = storedSnippet
+              ? JSON.parse(storedSnippet) as { tla?: string }
+              : null;
 
             if (storedTla && storedTla.tla !== tla) {
               const invariants = await tlaInvariants({ tla });
@@ -574,16 +597,19 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     };
   }, []);
 
-  async function ping(): Promise<any> {
+  async function ping(): Promise<PingResponse> {
     try {
       return await fetch("/api/ping", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-      }).then((resp) => resp.json());
+      }).then((resp) => resp.json() as Promise<PingResponse>);
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -604,7 +630,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   async function tlaVerify(
     data: { tla: string; inv: string },
-  ): Promise<any> {
+  ): Promise<VerifyResponse> {
     try {
       return await fetch("/api/verify", {
         method: "POST",
@@ -612,7 +638,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }).then((resp) => resp.json());
+      }).then((resp) => resp.json() as Promise<VerifyResponse>);
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }
@@ -680,24 +706,24 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
         <div class="flex flex-row divide-x-2 space-x-2 whitespace-pre">
           <div class="flex flex-row">
-              <span>Made with </span>
+            <span>Made with</span>
             <a
               class="flex flex-row hover:(opacity-70)"
               href="https://apalache.informal.systems"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Apalache </span>
+              <span>Apalache</span>
               <MountainIcon />
             </a>
-              <span> and </span>
+            <span>and</span>
             <a
               class="flex flex-row hover:(opacity-70)"
               href="https://fresh.deno.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Fresh </span>
+              <span>Fresh</span>
               <CitrusIcon />
             </a>
           </div>
@@ -708,7 +734,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>View Source </span>
+              <span>View Source</span>
               <GithubIcon />
             </a>
           </div>

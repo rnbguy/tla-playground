@@ -48,7 +48,7 @@ const grpcStubOptions = {
 
 let reflectionPackagePromise: Promise<proto.PackageDefinition> | null = null;
 
-async function getReflectionPackageDefinition(): Promise<proto.PackageDefinition> {
+function getReflectionPackageDefinition(): Promise<proto.PackageDefinition> {
   if (!reflectionPackagePromise) {
     reflectionPackagePromise = (async () => {
       const response = await fetch(PROTO_URL, {

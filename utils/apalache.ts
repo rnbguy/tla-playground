@@ -1,8 +1,6 @@
 import { UntarStream } from "@std/tar";
 import { type TarStreamEntry } from "@std/tar/untar-stream";
 import { cache } from "cache/mod.ts";
-import { promisify } from "node:util";
-import { default as protobuf } from "protobufjs";
 import { default as protobufDescriptor } from "protobufjs/ext/descriptor/index.js";
 import * as grpc from "@grpc/grpc-js";
 import * as proto from "@grpc/proto-loader";
@@ -20,19 +18,21 @@ type PingRequest = Record<number, never>;
 
 type RunResponse =
   | { result: "failure"; failure: { errorType: string; data: string } }
-  | { result: "success" };
+  | { result: "success"; success: string };
 
 type PingResponse = Record<number, never>;
+type RpcError = grpc.ServiceError | Error | null;
+type TarEntryLike = TarStreamEntry & { type?: string; fileName?: string };
 
 type CmdExecutor = {
   new (url: string, creds: grpc.ChannelCredentials): CmdExecutor;
   run: (
     req: RunRequest,
-    callback: (err: any, res: RunResponse) => void,
+    callback: (err: RpcError, res: RunResponse) => void,
   ) => void;
   ping: (
     req: PingRequest,
-    callback: (err: any, res: PingResponse) => void,
+    callback: (err: RpcError, res: PingResponse) => void,
   ) => void;
 };
 
@@ -56,10 +56,9 @@ export class Apalache {
   version: string | undefined;
   process: Deno.ChildProcess | undefined;
   client: CmdExecutor | undefined;
-  protoRoot: protobuf.Root | undefined;
 
   async setVersion(version: string) {
-    if (version == "latest") {
+    if (version === "latest") {
       version = await this.getLatestVersion();
     }
     this.version = version.replace(/^v/, "");
@@ -86,7 +85,11 @@ export class Apalache {
         .pipeThrough(new DecompressionStream("gzip"))
         .pipeThrough(new UntarStream()) as AsyncIterable<TarStreamEntry>
     ) {
-      if (entry.type === "file" && entry.fileName.endsWith(TGZ_JAR_NAME)) {
+      const tarEntry = entry as TarEntryLike;
+      if (
+        tarEntry.type === "file" &&
+        tarEntry.fileName?.endsWith(TGZ_JAR_NAME)
+      ) {
         await entry.readable?.pipeTo(
           (await Deno.create(this.getJarName())).writable,
         );
@@ -129,10 +132,7 @@ export class Apalache {
     const reflectionClient = await getReflectionClient(conn_opt);
 
     // Query reflection endpoint (retry if server is unreachable)
-    const [apalalcheProtoRoot, apalacheProtoDef]: [
-      protobuf.Root,
-      proto.PackageDefinition,
-    ] = await new Promise<
+    const apalacheProtoDef = await new Promise<
       ServerReflectionResponse
     >(
       (resolve, reject) => {
@@ -145,41 +145,30 @@ export class Apalache {
 
         call.write({ file_containing_symbol: APALACHE_SERVICE_NAME });
       },
-    ).then((protoDefResponse: ServerReflectionResponse) => {
-      if ("error_response" in protoDefResponse) {
-        return Promise.reject(protoDefResponse);
-      } else {
-        // Decode reflection response to FileDescriptorProto
-        const fileDescriptorProtos = protoDefResponse.file_descriptor_response
-          .file_descriptor_proto.map(
-            (bytes) =>
-              protobufDescriptor.FileDescriptorProto.decode(
-                bytes,
-              ) as protobufDescriptor.IFileDescriptorProto,
+    ).then(
+      (protoDefResponse: ServerReflectionResponse): proto.PackageDefinition => {
+        if ("error_response" in protoDefResponse) {
+          throw new Error("Failed to resolve Apalache reflection descriptor");
+        } else {
+          // Decode reflection response to FileDescriptorProto
+          const fileDescriptorProtos = protoDefResponse.file_descriptor_response
+            .file_descriptor_proto.map(
+              (bytes) =>
+                protobufDescriptor.FileDescriptorProto.decode(
+                  bytes,
+                ) as protobufDescriptor.IFileDescriptorProto,
+            );
+
+          // Use proto-loader to load the FileDescriptorProto wrapped in a FileDescriptorSet
+          const packageDefinition = proto.loadFileDescriptorSetFromObject(
+            { file: fileDescriptorProtos },
+            grpcStubOptions,
           );
 
-        // Use proto-loader to load the FileDescriptorProto wrapped in a FileDescriptorSet
-        const packageDefinition = proto.loadFileDescriptorSetFromObject(
-          { file: fileDescriptorProtos },
-          grpcStubOptions,
-        );
-
-        const fileDescriptorSetMessage = protobufDescriptor.FileDescriptorSet
-          .fromObject({
-            file: fileDescriptorProtos,
-          });
-
-        const protobufRoot = protobuf.Root.fromDescriptor(
-          fileDescriptorSetMessage,
-        );
-
-        // console.log(protobufRoot.lookupService(APALACHE_SERVICE_NAME));
-
-        return [protobufRoot, packageDefinition];
-      }
-    });
-
-    this.protoRoot = apalalcheProtoRoot;
+          return packageDefinition;
+        }
+      },
+    );
 
     const apalacheService = grpc.loadPackageDefinition(
       apalacheProtoDef,
@@ -191,7 +180,45 @@ export class Apalache {
     );
   }
 
-  async modelCheck(tla: string, inv: string, length: number): Promise<any> {
+  private async runCommand(req: RunRequest): Promise<RunResponse> {
+    const client = this.client;
+    if (!client) {
+      throw new Error("Apalache client not initialized");
+    }
+
+    return await new Promise<RunResponse>((resolve, reject) => {
+      client.run(req, (err, res) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(res);
+      });
+    });
+  }
+
+  private async pingCommand(req: PingRequest): Promise<PingResponse> {
+    const client = this.client;
+    if (!client) {
+      throw new Error("Apalache client not initialized");
+    }
+
+    return await new Promise<PingResponse>((resolve, reject) => {
+      client.ping(req, (err, res) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(res);
+      });
+    });
+  }
+
+  async modelCheck(
+    tla: string,
+    inv: string,
+    length: number,
+  ): Promise<RunResponse> {
     const config = {
       input: {
         source: {
@@ -212,18 +239,14 @@ export class Apalache {
     };
 
     const cmd = {
-      cmd: this.protoRoot?.lookupEnum("Cmd").values.CHECK,
+      cmd: "CHECK",
       config: JSON.stringify(config),
     };
 
-    const resp = await promisify((
-      data: RunRequest,
-      callback: (err: any, res: RunResponse) => void,
-    ) => this.client?.run(data, callback))(cmd);
-    return resp;
+    return await this.runCommand(cmd);
   }
 
-  async modelTypeCheck(tla: string): Promise<any> {
+  async modelTypeCheck(tla: string): Promise<RunResponse> {
     const config = {
       input: {
         source: {
@@ -236,18 +259,14 @@ export class Apalache {
     };
 
     const cmd = {
-      cmd: this.protoRoot?.lookupEnum("Cmd").values.TYPECHECK,
+      cmd: "TYPECHECK",
       config: JSON.stringify(config),
     };
 
-    const resp = await promisify((
-      data: RunRequest,
-      callback: (err: any, res: RunResponse) => void,
-    ) => this.client?.run(data, callback))(cmd);
-    return resp;
+    return await this.runCommand(cmd);
   }
 
-  async modelSimulate(tla: string): Promise<any> {
+  async modelSimulate(tla: string): Promise<RunResponse> {
     const config = {
       input: {
         source: {
@@ -264,21 +283,13 @@ export class Apalache {
     };
 
     const cmd = {
-      cmd: this.protoRoot?.lookupEnum("Cmd").values.SIMULATE,
+      cmd: "SIMULATE",
       config: JSON.stringify(config),
     };
-    const resp = await promisify((
-      data: RunRequest,
-      callback: (err: any, res: RunResponse) => void,
-    ) => this.client?.run(data, callback))(cmd);
-    return resp;
+    return await this.runCommand(cmd);
   }
 
-  async ping(): Promise<any> {
-    const resp = await promisify((
-      data: PingRequest,
-      callback: (err: any, res: PingResponse) => void,
-    ) => this.client?.ping(data, callback))({});
-    return resp;
+  async ping(): Promise<PingResponse> {
+    return await this.pingCommand({});
   }
 }
