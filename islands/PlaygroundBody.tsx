@@ -70,12 +70,6 @@ const THEME_PAIR_OPTIONS: Array<{ key: ThemePairKey; label: string }> = [
   { key: "kanagawa", label: "Kanagawa" },
 ];
 
-const SHIKI_THEMES = Array.from(
-  new Set(
-    Object.values(THEME_PAIR_MAP).flatMap((pair) => [pair.light, pair.dark]),
-  ),
-);
-
 function getShikiThemeName(
   pair: ThemePairKey,
   mode: ResolvedTheme,
@@ -933,9 +927,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           };
         }
       })().catch((error) => {
-        const message = error instanceof Error
-          ? error.message
-          : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         errorText.value = `> ${message}`;
       });
     }).catch((error) => {
