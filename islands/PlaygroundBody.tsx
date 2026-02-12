@@ -9,13 +9,6 @@ interface PlaygroundProps {
   out: string;
 }
 
-type PingResponse =
-  | { status: "ok" }
-  | {
-    status: "error";
-    message: string;
-    source: "frontend error" | "frontend api error" | "apalache server down";
-  };
 type VerifyResponse = Record<string, unknown>;
 
 function extractApiMessage(payload: unknown): string | null {
@@ -38,6 +31,7 @@ type MonacoEditor = {
   getValue: () => string;
   setValue: (value: string) => void;
   addCommand: (keybinding: number, handler: () => void) => void;
+  onDidChangeModelContent: (handler: () => void) => { dispose: () => void };
   dispose: () => void;
 };
 
@@ -437,7 +431,12 @@ const TLAPlusMonarchLanguage = {
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editor = useRef<MonacoEditor | null>(null);
-  const pollingTimerRef = useRef<number | null>(null);
+  const editorChangeDebounceRef = useRef<number | null>(null);
+  const verifyAbortRef = useRef<AbortController | null>(null);
+  const invariantsAbortRef = useRef<AbortController | null>(null);
+  const verifyRequestIdRef = useRef(0);
+  const invariantsRequestIdRef = useRef(0);
+  const invariantsCacheRef = useRef(new Map<string, string[]>());
 
   const loadingText = useSignal("");
   const consoleText = useSignal(props.out);
@@ -547,38 +546,55 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           allInvs.value = initTla.invs;
           selectedInv.value = initTla.inv;
 
-          pollingTimerRef.current = globalThis.setInterval(async () => {
-            const currentEditor = editor.current;
-            if (!currentEditor) {
-              return;
+          const scheduleInvariantSync = () => {
+            if (editorChangeDebounceRef.current !== null) {
+              globalThis.clearTimeout(editorChangeDebounceRef.current);
             }
 
-            const tla = currentEditor.getValue();
-            const storedSnippet = localStorage.getItem("tla-snippet");
-            const storedTla = storedSnippet
-              ? JSON.parse(storedSnippet) as { tla?: string }
-              : null;
+            editorChangeDebounceRef.current = globalThis.setTimeout(
+              async () => {
+                const currentEditor = editor.current;
+                if (!currentEditor) {
+                  return;
+                }
 
-            if (storedTla && storedTla.tla !== tla) {
-              const invariants = await tlaInvariants({ tla });
+                const tla = currentEditor.getValue();
+                const invariants = await tlaInvariants({ tla });
 
-              allInvs.value = invariants;
+                if (invariants.length === 0) {
+                  return;
+                }
 
-              if (!invariants.includes(selectedInv.value)) {
-                selectedInv.value = invariants[invariants.length - 1] ?? "";
-              }
+                allInvs.value = invariants;
+                if (!invariants.includes(selectedInv.value)) {
+                  selectedInv.value = invariants[0] ?? "";
+                }
 
-              localStorage.setItem(
-                "tla-snippet",
-                JSON.stringify({
-                  tla,
-                  invs: allInvs.value,
-                  inv: selectedInv.value,
-                  out: consoleText.value,
-                }),
-              );
-            }
-          }, 5000);
+                localStorage.setItem(
+                  "tla-snippet",
+                  JSON.stringify({
+                    tla,
+                    invs: allInvs.value,
+                    inv: selectedInv.value,
+                    out: consoleText.value,
+                  }),
+                );
+              },
+              500,
+            );
+          };
+
+          const changeSubscription = editor.current.onDidChangeModelContent(
+            scheduleInvariantSync,
+          );
+
+          scheduleInvariantSync();
+
+          const previousDispose = editor.current.dispose.bind(editor.current);
+          editor.current.dispose = () => {
+            changeSubscription.dispose();
+            previousDispose();
+          };
         },
       );
     }).catch((error) => {
@@ -588,47 +604,28 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
     return () => {
       isDisposed = true;
-      if (pollingTimerRef.current !== null) {
-        globalThis.clearInterval(pollingTimerRef.current);
-        pollingTimerRef.current = null;
+      if (editorChangeDebounceRef.current !== null) {
+        globalThis.clearTimeout(editorChangeDebounceRef.current);
+        editorChangeDebounceRef.current = null;
       }
+      verifyAbortRef.current?.abort();
+      invariantsAbortRef.current?.abort();
       editor.current?.dispose();
       editor.current = null;
     };
   }, []);
 
-  async function ping(): Promise<PingResponse> {
-    try {
-      const response = await fetch("/api/ping", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        const message = extractApiMessage(payload) ??
-          `Ping API failed with status ${response.status}`;
-        const source = message.includes("Apalache server unavailable")
-          ? "apalache server down"
-          : "frontend api error";
-        console.error(`[${source}] ${message}`);
-        return { status: "error", message, source };
-      }
-
-      return payload as PingResponse;
-    } catch (error) {
-      console.error("[frontend error] Failed to call /api/ping", error);
-      return {
-        status: "error",
-        message: error instanceof Error ? error.message : String(error),
-        source: "frontend error",
-      };
-    }
-  }
-
   async function tlaInvariants(data: { tla: string }): Promise<string[]> {
+    const cachedInvariants = invariantsCacheRef.current.get(data.tla);
+    if (cachedInvariants) {
+      return cachedInvariants;
+    }
+
+    invariantsAbortRef.current?.abort();
+    const abortController = new AbortController();
+    invariantsAbortRef.current = abortController;
+    const requestId = ++invariantsRequestIdRef.current;
+
     try {
       const response = await fetch("/api/invariants", {
         method: "POST",
@@ -636,6 +633,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -646,8 +644,17 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         return [];
       }
 
-      return await response.json();
+      const invariants = await response.json() as string[];
+      if (requestId !== invariantsRequestIdRef.current) {
+        return [];
+      }
+
+      invariantsCacheRef.current.set(data.tla, invariants);
+      return invariants;
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return [];
+      }
       console.error("[frontend error] Failed to call /api/invariants", error);
       return [];
     }
@@ -656,6 +663,11 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   async function tlaVerify(
     data: { tla: string; inv: string },
   ): Promise<VerifyResponse> {
+    verifyAbortRef.current?.abort();
+    const abortController = new AbortController();
+    verifyAbortRef.current = abortController;
+    const requestId = ++verifyRequestIdRef.current;
+
     try {
       const response = await fetch("/api/verify", {
         method: "POST",
@@ -663,9 +675,14 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
+        signal: abortController.signal,
       });
 
       const payload = await response.json();
+      if (requestId !== verifyRequestIdRef.current) {
+        return {};
+      }
+
       if (!response.ok) {
         const message = extractApiMessage(payload) ??
           `Verify API failed with status ${response.status}`;
@@ -674,6 +691,9 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
       return payload as VerifyResponse;
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return {};
+      }
       console.error("[frontend error] Failed to call /api/verify", error);
       return { error: error instanceof Error ? error.message : String(error) };
     }
@@ -687,13 +707,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
     const tla = currentEditor.getValue();
 
-    const pingResp = await ping();
-    if (pingResp.status !== "ok") {
-      consoleText.value = "";
-      errorText.value = `> ${pingResp.message}`;
-      return;
-    }
-
+    loadingText.value = "> queued";
     const invariants = await tlaInvariants({ tla });
 
     allInvs.value = invariants;
@@ -714,6 +728,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     const spinner = new Spinner(["...", " ..", ". .", ".. "]);
     errorText.value = "";
     consoleText.value = "";
+    loadingText.value = "> running";
 
     const spinnerTimer = globalThis.setInterval(() => {
       loadingText.value = `> processing ${spinner.next()}`;
