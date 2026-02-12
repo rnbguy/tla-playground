@@ -1,4 +1,4 @@
-import { Apalache } from "../utils/apalache.ts";
+import { Apalache } from "../../utils/apalache.ts";
 import { FreshContext } from "fresh";
 
 const config = Deno.env.toObject();
@@ -31,7 +31,6 @@ export const handler = {
       ) => d.type === "Bool" || d.type === "(() => Bool)").map((
         d: { name: string },
       ) => d.name).filter((d: string) => d !== "Init" && d !== "Next");
-      // console.log(invariants);
       return Response.json(invariants);
     } else {
       return Response.json([]);

@@ -1,4 +1,4 @@
-import { Apalache } from "../utils/apalache.ts";
+import { Apalache } from "../../utils/apalache.ts";
 import { FreshContext } from "fresh";
 
 const config = Deno.env.toObject();
@@ -36,12 +36,12 @@ export const handler = {
         outJson.result = parsedJson.msg;
       } else {
         if (
-          parsedJson.pass_name == "BoundedChecker" &&
+          parsedJson.pass_name === "BoundedChecker" &&
           parsedJson.error_data.counterexamples
         ) {
           outJson.result = "Violated";
           outJson.counterexample = parsedJson.error_data.counterexamples[0]
-            .states.map((e) => {
+            .states.map((e: Record<string, unknown>) => {
               delete e["#meta"];
               return e;
             });

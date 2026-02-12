@@ -1,4 +1,4 @@
-import { Apalache } from "../utils/apalache.ts";
+import { Apalache } from "../../utils/apalache.ts";
 
 const APALACHE_VERSION = "0.40.7";
 

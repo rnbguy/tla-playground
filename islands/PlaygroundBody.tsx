@@ -455,7 +455,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   async function ping(): Promise<any> {
     try {
-      return await fetch("/ping", {
+      return await fetch("/api/ping", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -468,7 +468,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   async function tlaInvariants(data: { tla: string }): Promise<string[]> {
     try {
-      return await fetch("/invariants", {
+      return await fetch("/api/invariants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -485,7 +485,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     data: { tla: string; inv: string },
   ): Promise<any> {
     try {
-      return await fetch("/verify", {
+      return await fetch("/api/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
