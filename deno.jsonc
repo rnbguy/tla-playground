@@ -29,8 +29,10 @@
   },
   "nodeModulesDir": "auto",
   "imports": {
-    "@grpc/grpc-js": "npm:@grpc/grpc-js@^1.12.2",
-    "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.7.13",
+    // don't update @grpc/grpc-js
+    // https://github.com/denoland/deno/issues/26907
+    "@grpc/grpc-js": "npm:@grpc/grpc-js@1.12.6",
+    "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.8.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.0.8",
     "@preact/signals": "npm:@preact/signals@^2.5.0",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.13",
@@ -48,7 +50,7 @@
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "cache/mod.ts": "jsr:@denosaurs/cache@^0.2.15",
     "preact": "npm:preact@10.27.2",
-    "protobufjs": "npm:protobufjs@^7.4.0",
+    "protobufjs": "npm:protobufjs@^7.5.4",
     "tailwindcss": "npm:tailwindcss@^4.1.13",
     "fresh": "jsr:@fresh/core@^2.2.0",
     "vite": "npm:vite@^7.3.1"
