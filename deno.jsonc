@@ -51,6 +51,7 @@
     "cache/mod.ts": "jsr:@denosaurs/cache@^0.2.15",
     "preact": "npm:preact@10.27.2",
     "protobufjs": "npm:protobufjs@^7.5.4",
+    "protobufjs/": "npm:/protobufjs@^7.5.4/",
     "tailwindcss": "npm:tailwindcss@^4.1.13",
     "fresh": "jsr:@fresh/core@^2.2.0",
     "vite": "npm:vite@^7.3.1"

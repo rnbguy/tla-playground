@@ -2,6 +2,13 @@ import { defineConfig } from "vite";
 import { fresh } from "@fresh/plugin-vite";
 import tailwindcss from "@tailwindcss/vite";
 
+const externalDeps = [
+  "protobufjs",
+  "protobufjs/ext/descriptor/index.js",
+  "@grpc/grpc-js",
+  "@grpc/proto-loader",
+];
+
 export default defineConfig({
   plugins: [
     fresh({
@@ -15,10 +22,10 @@ export default defineConfig({
   build: {
     minify: false,
     rollupOptions: {
-      external: ["protobufjs", "@grpc/grpc-js", "@grpc/proto-loader"],
+      external: externalDeps,
     },
   },
   ssr: {
-    external: ["protobufjs", "@grpc/grpc-js", "@grpc/proto-loader"],
+    external: externalDeps,
   },
 });
