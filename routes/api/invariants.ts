@@ -1,7 +1,10 @@
 import { define } from "../../utils.ts";
 
 const INVARIANTS_CACHE_TTL_MS = 10_000;
-const invariantsCache = new Map<string, { value: string[]; expiresAt: number }>();
+const invariantsCache = new Map<
+  string,
+  { value: string[]; expiresAt: number }
+>();
 
 export const handler = define.handlers({
   async POST(ctx): Promise<Response> {
