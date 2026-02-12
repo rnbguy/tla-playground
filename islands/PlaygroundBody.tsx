@@ -117,6 +117,7 @@ function MountainIcon() {
   return (
     <svg
       aria-hidden="true"
+      class="block"
       fill="none"
       height="16"
       stroke="currentColor"
@@ -136,6 +137,7 @@ function CitrusIcon() {
   return (
     <svg
       aria-hidden="true"
+      class="block"
       fill="none"
       height="16"
       stroke="currentColor"
@@ -156,6 +158,7 @@ function GithubIcon() {
   return (
     <svg
       aria-hidden="true"
+      class="block"
       fill="none"
       height="16"
       stroke="currentColor"
@@ -783,33 +786,33 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           <div class="flex flex-row">
             <span>Made with</span>
             <a
-              class="flex flex-row hover:(opacity-70)"
+              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
               href="https://apalache.informal.systems"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Apalache</span>
+              <span class="inline-flex h-4 items-center">Apalache</span>
               <MountainIcon />
             </a>
             <span>and</span>
             <a
-              class="flex flex-row hover:(opacity-70)"
+              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
               href="https://fresh.deno.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>Fresh</span>
+              <span class="inline-flex h-4 items-center">Fresh</span>
               <CitrusIcon />
             </a>
           </div>
           <div class="pl-2">
             <a
-              class="flex flex-row hover:(opacity-70)"
+              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
               href="https://github.com/rnbguy/fresh-playground"
               rel="noopener noreferrer"
               target="_blank"
             >
-              <span>View Source</span>
+              <span class="inline-flex h-4 items-center">View Source</span>
               <GithubIcon />
             </a>
           </div>
