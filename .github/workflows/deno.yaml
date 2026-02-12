@@ -27,5 +27,8 @@ jobs:
       - name: Type Check
         run: deno check
 
+      - name: Test
+        run: deno test --allow-env --allow-net --allow-read
+
       - name: Build
         run: deno task build
