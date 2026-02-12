@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import * as yaml from "@std/yaml";
+import { Moon, Palette, Play, Sun, Type } from "lucide-preact";
+import {
+  IconBrandDeno,
+  IconBrandGithub,
+  IconLemon,
+  IconMountain,
+} from "@tabler/icons-preact";
 
 interface PlaygroundProps {
   tla: string;
@@ -10,6 +17,109 @@ interface PlaygroundProps {
 }
 
 type VerifyResponse = Record<string, unknown>;
+
+type ResolvedTheme = "light" | "dark";
+type ThemePairKey =
+  | "vitesse"
+  | "github"
+  | "night-owl"
+  | "rose-pine"
+  | "catppuccin"
+  | "solarized"
+  | "plus"
+  | "one"
+  | "gruvbox"
+  | "kanagawa";
+type DarknessMode = "dark" | "light";
+
+const FONT_STORAGE_KEY = "playground-font";
+const THEME_PAIR_STORAGE_KEY = "playground-theme-pair";
+const DARKNESS_MODE_STORAGE_KEY = "playground-darkness";
+
+type CodeFont = "fira" | "jetbrains" | "ibm" | "iosevka" | "inconsolata";
+
+const FONT_FAMILY_MAP: Record<CodeFont, string> = {
+  fira: "Fira Code, monospace",
+  jetbrains: "JetBrains Mono, monospace",
+  ibm: "IBM Plex Mono, monospace",
+  iosevka: "Iosevka, monospace",
+  inconsolata: "Inconsolata, monospace",
+};
+
+const THEME_PAIR_MAP: Record<ThemePairKey, { light: string; dark: string }> = {
+  vitesse: { light: "vitesse-light", dark: "vitesse-dark" },
+  github: { light: "github-light", dark: "github-dark" },
+  "night-owl": { light: "night-owl-light", dark: "night-owl" },
+  "rose-pine": { light: "rose-pine-dawn", dark: "rose-pine-moon" },
+  catppuccin: { light: "catppuccin-latte", dark: "catppuccin-mocha" },
+  solarized: { light: "solarized-light", dark: "solarized-dark" },
+  plus: { light: "light-plus", dark: "dark-plus" },
+  one: { light: "one-light", dark: "one-dark-pro" },
+  gruvbox: { light: "gruvbox-light-medium", dark: "gruvbox-dark-medium" },
+  kanagawa: { light: "kanagawa-lotus", dark: "kanagawa-wave" },
+};
+
+const THEME_PAIR_OPTIONS: Array<{ key: ThemePairKey; label: string }> = [
+  { key: "vitesse", label: "Vitesse" },
+  { key: "github", label: "GitHub" },
+  { key: "night-owl", label: "Night Owl" },
+  { key: "rose-pine", label: "Rose Pine" },
+  { key: "catppuccin", label: "Catppuccin" },
+  { key: "solarized", label: "Solarized" },
+  { key: "plus", label: "VS Code Plus" },
+  { key: "one", label: "One Dark Pro" },
+  { key: "gruvbox", label: "Gruvbox" },
+  { key: "kanagawa", label: "Kanagawa" },
+];
+
+const SHIKI_THEMES = Array.from(
+  new Set(
+    Object.values(THEME_PAIR_MAP).flatMap((pair) => [pair.light, pair.dark]),
+  ),
+);
+
+function getShikiThemeName(
+  pair: ThemePairKey,
+  mode: ResolvedTheme,
+): string {
+  const selectedPair = THEME_PAIR_MAP[pair];
+  return mode === "dark" ? selectedPair.dark : selectedPair.light;
+}
+
+function readStoredCodeFont(): CodeFont {
+  const stored = localStorage.getItem(FONT_STORAGE_KEY);
+  if (
+    stored === "fira" || stored === "jetbrains" || stored === "ibm" ||
+    stored === "iosevka" || stored === "inconsolata"
+  ) {
+    return stored;
+  }
+
+  return "iosevka";
+}
+
+function readStoredThemePair(): ThemePairKey {
+  const stored = localStorage.getItem(THEME_PAIR_STORAGE_KEY);
+  if (
+    stored === "vitesse" || stored === "github" || stored === "night-owl" ||
+    stored === "rose-pine" || stored === "catppuccin" ||
+    stored === "solarized" || stored === "plus" || stored === "one" ||
+    stored === "gruvbox" || stored === "kanagawa"
+  ) {
+    return stored;
+  }
+
+  return "vitesse";
+}
+
+function readStoredDarknessMode(): DarknessMode | null {
+  const stored = localStorage.getItem(DARKNESS_MODE_STORAGE_KEY);
+  if (stored === "dark" || stored === "light") {
+    return stored;
+  }
+
+  return null;
+}
 
 function extractApiMessage(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
@@ -27,11 +137,27 @@ function extractApiMessage(payload: unknown): string | null {
   return null;
 }
 
+function normalizeInvariants(invariants: string[]): string[] {
+  const unique = Array.from(new Set(invariants));
+  unique.sort((a, b) => {
+    const rank = (name: string) => {
+      return name.toLowerCase().includes("inv") ? 0 : 1;
+    };
+    const rankDiff = rank(a) - rank(b);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+    return a.localeCompare(b);
+  });
+  return unique;
+}
+
 type MonacoEditor = {
   getValue: () => string;
   setValue: (value: string) => void;
   addCommand: (keybinding: number, handler: () => void) => void;
   onDidChangeModelContent: (handler: () => void) => { dispose: () => void };
+  updateOptions: (options: Record<string, unknown>) => void;
   dispose: () => void;
 };
 
@@ -47,6 +173,7 @@ type MonacoNamespace = {
       element: HTMLElement,
       options: Record<string, unknown>,
     ) => MonacoEditor;
+    setTheme: (themeName: string) => void;
   };
 };
 
@@ -56,6 +183,8 @@ type MonacoRequire = {
 };
 
 let monacoLoaderPromise: Promise<void> | null = null;
+let shikiMonacoThemePromise: Promise<void> | null = null;
+let shikiHighlighter: import("shiki").Highlighter | null = null;
 
 function loadMonacoLoader(): Promise<void> {
   if (!monacoLoaderPromise) {
@@ -113,65 +242,189 @@ function loadMonacoLoader(): Promise<void> {
   return monacoLoaderPromise;
 }
 
+async function setupShikiThemes(monaco: MonacoNamespace): Promise<void> {
+  if (!shikiMonacoThemePromise) {
+    shikiMonacoThemePromise = (async () => {
+      const [{ createHighlighter }, { shikiToMonaco }] = await Promise.all([
+        import("shiki"),
+        import("@shikijs/monaco"),
+      ]);
+
+      const highlighter = await createHighlighter({
+        themes: SHIKI_THEMES,
+        langs: ["plaintext"],
+      });
+
+      shikiToMonaco(highlighter, monaco);
+      shikiHighlighter = highlighter;
+    })().catch((error) => {
+      shikiMonacoThemePromise = null;
+      throw error;
+    });
+  }
+
+  await shikiMonacoThemePromise;
+}
+
 function MountainIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      class="block"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="m8 3 4 8 5-5 4 15H3z" />
-      <path d="m4 18 5-6 3 4" />
-    </svg>
-  );
+  return <IconMountain aria-hidden="true" class="icon-stroke" size={16} />;
 }
 
 function CitrusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      class="block"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 4v16" />
-      <path d="M4 12h16" />
-    </svg>
-  );
+  return <IconLemon aria-hidden="true" class="icon-stroke" size={16} />;
 }
 
 function GithubIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      class="block"
-      fill="none"
-      height="16"
-      stroke="currentColor"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      stroke-width="2"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path d="M9 19c-5 1.5-5-2.5-7-3" />
-      <path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.1-1.5 6.1-6.7A5.2 5.2 0 0 0 18.7 5 4.8 4.8 0 0 0 18.6 1s-1.1-.3-3.6 1.4a12.3 12.3 0 0 0-6 0C6.5.7 5.4 1 5.4 1A4.8 4.8 0 0 0 5.3 5 5.2 5.2 0 0 0 4 8.8c0 5.2 3.1 6.4 6.1 6.7a3.4 3.4 0 0 0-.9 2.6V22" />
-    </svg>
+  return <IconBrandGithub aria-hidden="true" class="icon-stroke" size={16} />;
+}
+
+function DenoIcon() {
+  return <IconBrandDeno aria-hidden="true" class="icon-stroke" size={16} />;
+}
+
+function SunIcon() {
+  return <Sun aria-hidden="true" class="icon-stroke" size={16} />;
+}
+
+function MoonIcon() {
+  return <Moon aria-hidden="true" class="icon-stroke" size={16} />;
+}
+
+type ThemePalette = {
+  bg: string;
+  fg: string;
+  surface: string;
+  surfaceStrong: string;
+  editorBg: string;
+  muted: string;
+  accent: string;
+  accentStrong: string;
+  accentFg: string;
+  danger: string;
+};
+
+function pickThemeColor(
+  theme: import("shiki").ThemeRegistrationResolved,
+  keys: string[],
+  fallback: string,
+): string {
+  for (const key of keys) {
+    const value = theme.colors?.[key];
+    if (value) {
+      return value;
+    }
+  }
+  return fallback;
+}
+
+function buildThemePalette(
+  theme: import("shiki").ThemeRegistrationResolved,
+): ThemePalette {
+  const bg = theme.bg || theme.colors?.["editor.background"] || "Canvas";
+  const fg = theme.fg || theme.colors?.["editor.foreground"] || "CanvasText";
+  const surface = pickThemeColor(
+    theme,
+    [
+      "editor.background",
+      "sideBar.background",
+      "panel.background",
+      "editorWidget.background",
+    ],
+    bg,
   );
+  const surfaceStrong = pickThemeColor(
+    theme,
+    [
+      "editorWidget.background",
+      "dropdown.background",
+      "panel.background",
+      "menu.background",
+    ],
+    surface,
+  );
+  const editorBg = pickThemeColor(
+    theme,
+    ["editor.background", "terminal.background", "panel.background"],
+    bg,
+  );
+  const muted = pickThemeColor(
+    theme,
+    [
+      "descriptionForeground",
+      "editorLineNumber.foreground",
+      "sideBar.foreground",
+      "disabledForeground",
+    ],
+    fg,
+  );
+  const accent = pickThemeColor(
+    theme,
+    [
+      "button.background",
+      "textLink.foreground",
+      "editorLink.activeForeground",
+      "terminal.ansiBlue",
+      "terminal.ansiBrightBlue",
+    ],
+    fg,
+  );
+  const accentStrong = pickThemeColor(
+    theme,
+    [
+      "button.hoverBackground",
+      "textLink.activeForeground",
+      "statusBarItem.remoteBackground",
+      "terminal.ansiBrightBlue",
+    ],
+    accent,
+  );
+  const accentFg = pickThemeColor(
+    theme,
+    ["button.foreground", "badge.foreground", "editor.background"],
+    fg,
+  );
+  const danger = pickThemeColor(
+    theme,
+    [
+      "errorForeground",
+      "editorError.foreground",
+      "terminal.ansiRed",
+      "terminal.ansiBrightRed",
+    ],
+    fg,
+  );
+
+  return {
+    bg,
+    fg,
+    surface,
+    surfaceStrong,
+    editorBg,
+    muted,
+    accent,
+    accentStrong,
+    accentFg,
+    danger,
+  };
+}
+
+function applyThemePalette(themeName: string) {
+  if (!shikiHighlighter) {
+    return;
+  }
+  const theme = shikiHighlighter.getTheme(themeName);
+  const palette = buildThemePalette(theme);
+  const root = document.documentElement;
+  root.style.setProperty("--theme-bg", palette.bg);
+  root.style.setProperty("--theme-fg", palette.fg);
+  root.style.setProperty("--theme-surface", palette.surface);
+  root.style.setProperty("--theme-surface-strong", palette.surfaceStrong);
+  root.style.setProperty("--theme-editor-bg", palette.editorBg);
+  root.style.setProperty("--theme-muted", palette.muted);
+  root.style.setProperty("--theme-accent", palette.accent);
+  root.style.setProperty("--theme-accent-strong", palette.accentStrong);
+  root.style.setProperty("--theme-accent-fg", palette.accentFg);
+  root.style.setProperty("--theme-danger", palette.danger);
 }
 
 class Spinner {
@@ -433,7 +686,10 @@ const TLAPlusMonarchLanguage = {
 
 export default function PlaygroundBody(props: PlaygroundProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const outputRef = useRef<HTMLDivElement | null>(null);
   const editor = useRef<MonacoEditor | null>(null);
+  const outputEditor = useRef<MonacoEditor | null>(null);
+  const monacoRef = useRef<MonacoNamespace | null>(null);
   const editorChangeDebounceRef = useRef<number | null>(null);
   const verifyAbortRef = useRef<AbortController | null>(null);
   const invariantsAbortRef = useRef<AbortController | null>(null);
@@ -444,9 +700,76 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const loadingText = useSignal("");
   const consoleText = useSignal(props.out);
   const errorText = useSignal("");
+  const selectedThemePair = useSignal<ThemePairKey>("vitesse");
+  const darknessMode = useSignal<DarknessMode>("light");
+  const selectedFont = useSignal<CodeFont>("iosevka");
+  const fontMenuOpen = useSignal(false);
+  const themeMenuOpen = useSignal(false);
 
   const selectedInv = useSignal(props.inv);
   const allInvs = useSignal<string[]>(props.invs);
+
+  const renderOutput = (text: string) => {
+    consoleText.value = text;
+    const output = outputEditor.current;
+    if (!output) {
+      return;
+    }
+
+    output.setValue(text.trim() ? text : "\n");
+  };
+
+  useEffect(() => {
+    const mediaQuery = globalThis.matchMedia("(prefers-color-scheme: dark)");
+    selectedFont.value = readStoredCodeFont();
+    selectedThemePair.value = readStoredThemePair();
+
+    const stored = readStoredDarknessMode();
+    if (stored) {
+      darknessMode.value = stored;
+    } else {
+      darknessMode.value = mediaQuery.matches ? "dark" : "light";
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(DARKNESS_MODE_STORAGE_KEY, darknessMode.value);
+
+    const resolved = darknessMode.value;
+    document.documentElement.setAttribute("data-theme", resolved);
+    document.documentElement.style.colorScheme = resolved;
+    if (monacoRef.current) {
+      const themeName = getShikiThemeName(selectedThemePair.value, resolved);
+      monacoRef.current.editor.setTheme(themeName);
+      applyThemePalette(themeName);
+    }
+
+    void renderOutput(consoleText.value);
+  }, [darknessMode.value]);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_PAIR_STORAGE_KEY, selectedThemePair.value);
+    if (monacoRef.current) {
+      const themeName = getShikiThemeName(
+        selectedThemePair.value,
+        darknessMode.value,
+      );
+      monacoRef.current.editor.setTheme(themeName);
+      applyThemePalette(themeName);
+    }
+  }, [selectedThemePair.value]);
+
+  useEffect(() => {
+    const fontFamily = FONT_FAMILY_MAP[selectedFont.value];
+    document.documentElement.style.setProperty("--code-font", fontFamily);
+    editor.current?.updateOptions({ fontFamily });
+    outputEditor.current?.updateOptions({ fontFamily });
+    localStorage.setItem(FONT_STORAGE_KEY, selectedFont.value);
+  }, [selectedFont.value]);
+
+  const toggleTheme = () => {
+    darknessMode.value = darknessMode.value === "dark" ? "light" : "dark";
+  };
   useEffect(() => {
     let isDisposed = false;
 
@@ -468,7 +791,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       }
     }
 
-    consoleText.value = initTla.out;
+    void renderOutput(initTla.out);
 
     void loadMonacoLoader().then(() => {
       if (isDisposed) {
@@ -488,117 +811,163 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       runtime.require(
         ["vs/editor/editor.main"],
         function (monaco: MonacoNamespace) {
-          if (isDisposed || !editorRef.current) {
-            return;
-          }
-
-          monaco.languages.register({ id: "tla" });
-
-          monaco.languages.setMonarchTokensProvider(
-            "tla",
-            TLAPlusMonarchLanguage,
-          );
-
-          editor.current = monaco.editor.create(editorRef.current, {
-            language: "tla",
-            readOnly: false,
-            automaticLayout: true,
-            contextmenu: true,
-            fontFamily: "Fira Code, monospace",
-            fontSize: 14,
-            lineHeight: 18,
-            lineNumbersMinChars: 2,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            smoothScrolling: true,
-            scrollbar: {
-              useShadows: false,
-              verticalScrollbarSize: 10,
-              horizontalScrollbarSize: 10,
-            },
-            overviewRulerLanes: 0,
-          });
-
-          if (globalThis.location.hash) {
-            const gistId = globalThis.location.hash.substring(1);
-            fetch(`https://api.github.com/gists/${gistId}`, {
-              signal: AbortSignal.timeout(4000),
-            })
-              .then((value) => value.json())
-              .then((json) => {
-                const firstFile = Object.values(json.files)[0] as {
-                  content?: string;
-                };
-                editor.current?.setValue(
-                  firstFile.content ?? initTla.tla.trimStart(),
-                );
-              })
-              .catch((error) => {
-                console.error(error);
-                globalThis.location.hash = "";
-                editor.current?.setValue(initTla.tla.trimStart());
-              });
-          } else {
-            editor.current.setValue(initTla.tla.trimStart());
-          }
-
-          editor.current.addCommand(
-            monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-            processText,
-          );
-
-          allInvs.value = initTla.invs;
-          selectedInv.value = initTla.inv;
-
-          const scheduleInvariantSync = () => {
-            if (editorChangeDebounceRef.current !== null) {
-              globalThis.clearTimeout(editorChangeDebounceRef.current);
+          void (async () => {
+            if (isDisposed || !editorRef.current) {
+              return;
             }
 
-            editorChangeDebounceRef.current = globalThis.setTimeout(
-              async () => {
-                const currentEditor = editor.current;
-                if (!currentEditor) {
-                  return;
-                }
+            await setupShikiThemes(monaco);
+            monacoRef.current = monaco;
 
-                const tla = currentEditor.getValue();
-                const invariants = await tlaInvariants({ tla });
+            monaco.languages.register({ id: "tla" });
 
-                if (invariants.length === 0) {
-                  return;
-                }
-
-                allInvs.value = invariants;
-                if (!invariants.includes(selectedInv.value)) {
-                  selectedInv.value = invariants[0] ?? "";
-                }
-
-                localStorage.setItem(
-                  "tla-snippet",
-                  JSON.stringify({
-                    tla,
-                    invs: allInvs.value,
-                    inv: selectedInv.value,
-                    out: consoleText.value,
-                  }),
-                );
-              },
-              500,
+            monaco.languages.setMonarchTokensProvider(
+              "tla",
+              TLAPlusMonarchLanguage,
             );
-          };
 
-          const changeSubscription = editor.current.onDidChangeModelContent(
-            scheduleInvariantSync,
-          );
+            editor.current = monaco.editor.create(editorRef.current, {
+              language: "tla",
+              readOnly: false,
+              automaticLayout: true,
+              contextmenu: true,
+              fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+              fontSize: 14,
+              lineHeight: 20,
+              lineNumbersMinChars: 2,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              smoothScrolling: true,
+              scrollbar: {
+                useShadows: false,
+                verticalScrollbarSize: 10,
+                horizontalScrollbarSize: 10,
+              },
+              overviewRulerLanes: 0,
+            });
 
-          scheduleInvariantSync();
+            monaco.editor.setTheme(
+              getShikiThemeName(selectedThemePair.value, darknessMode.value),
+            );
+            applyThemePalette(
+              getShikiThemeName(selectedThemePair.value, darknessMode.value),
+            );
 
-          const previousDispose = editor.current.dispose.bind(editor.current);
-          editor.current.dispose = () => {
-            changeSubscription.dispose();
-            previousDispose();
-          };
+            if (outputRef.current) {
+              outputEditor.current = monaco.editor.create(outputRef.current, {
+                language: "yaml",
+                readOnly: true,
+                domReadOnly: true,
+                automaticLayout: true,
+                contextmenu: false,
+                fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+                fontSize: 13,
+                lineHeight: 20,
+                lineNumbersMinChars: 2,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                smoothScrolling: true,
+                overviewRulerLanes: 0,
+              });
+
+              renderOutput(consoleText.value || initTla.out);
+            }
+
+            if (globalThis.location.hash) {
+              const gistId = globalThis.location.hash.substring(1);
+              fetch(`https://api.github.com/gists/${gistId}`, {
+                signal: AbortSignal.timeout(4000),
+              })
+                .then((value) => value.json())
+                .then((json) => {
+                  const firstFile = Object.values(json.files)[0] as {
+                    content?: string;
+                  };
+                  editor.current?.setValue(
+                    firstFile.content ?? initTla.tla.trimStart(),
+                  );
+                })
+                .catch((error) => {
+                  console.error(error);
+                  globalThis.location.hash = "";
+                  editor.current?.setValue(initTla.tla.trimStart());
+                });
+            } else {
+              editor.current.setValue(initTla.tla.trimStart());
+            }
+
+            editor.current.addCommand(
+              monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+              processText,
+            );
+
+            allInvs.value = normalizeInvariants(initTla.invs);
+            selectedInv.value = initTla.inv;
+
+            const scheduleInvariantSync = () => {
+              if (editorChangeDebounceRef.current !== null) {
+                globalThis.clearTimeout(editorChangeDebounceRef.current);
+              }
+
+              editorChangeDebounceRef.current = globalThis.setTimeout(
+                async () => {
+                  const currentEditor = editor.current;
+                  if (!currentEditor) {
+                    return;
+                  }
+
+                  const tla = currentEditor.getValue();
+                  const invariants = normalizeInvariants(
+                    await tlaInvariants({ tla }),
+                  );
+
+                  allInvs.value = invariants;
+                  if (invariants.length === 0) {
+                    selectedInv.value = "";
+                  } else if (!invariants.includes(selectedInv.value)) {
+                    selectedInv.value = invariants[0] ?? "";
+                  }
+
+                  localStorage.setItem(
+                    "tla-snippet",
+                    JSON.stringify({
+                      tla,
+                      invs: allInvs.value,
+                      inv: selectedInv.value,
+                      out: consoleText.value,
+                    }),
+                  );
+                },
+                500,
+              );
+            };
+
+            const changeSubscription = editor.current.onDidChangeModelContent(
+              scheduleInvariantSync,
+            );
+
+            scheduleInvariantSync();
+
+            const previousDispose = editor.current.dispose.bind(editor.current);
+            editor.current.dispose = () => {
+              changeSubscription.dispose();
+              previousDispose();
+            };
+
+            if (outputEditor.current) {
+              const previousOutputDispose = outputEditor.current.dispose.bind(
+                outputEditor.current,
+              );
+              outputEditor.current.dispose = () => {
+                previousOutputDispose();
+              };
+            }
+          })().catch((error) => {
+            const message = error instanceof Error
+              ? error.message
+              : String(error);
+            errorText.value = `> ${message}`;
+          });
         },
       );
     }).catch((error) => {
@@ -615,7 +984,9 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       verifyAbortRef.current?.abort();
       invariantsAbortRef.current?.abort();
       editor.current?.dispose();
+      outputEditor.current?.dispose();
       editor.current = null;
+      outputEditor.current = null;
     };
   }, []);
 
@@ -712,7 +1083,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     const tla = currentEditor.getValue();
 
     loadingText.value = "> queued";
-    const invariants = await tlaInvariants({ tla });
+    const invariants = normalizeInvariants(await tlaInvariants({ tla }));
 
     allInvs.value = invariants;
 
@@ -721,7 +1092,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       : (invariants[0] ?? "");
 
     if (!invariantToVerify) {
-      consoleText.value = "";
+      void renderOutput("");
       errorText.value = "> No invariant available to verify";
       return;
     }
@@ -731,13 +1102,13 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     // const spinner = new Spinner(["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]);
     const spinner = new Spinner(["...", " ..", ". .", ".. "]);
     errorText.value = "";
-    consoleText.value = "";
+    void renderOutput("");
     loadingText.value = "> running";
 
     const spinnerTimer = globalThis.setInterval(() => {
       loadingText.value = `> processing ${spinner.next()}`;
     }, 200);
-    consoleText.value = "";
+    void renderOutput("");
     const data = { tla, inv: invariantToVerify };
     const respJson = await tlaVerify(data);
 
@@ -745,91 +1116,194 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     loadingText.value = "";
 
     const rendered = yaml.stringify(respJson, { indent: 2 }).trim();
-    consoleText.value = rendered.length > 0
+    const output = rendered.length > 0
       ? rendered
       : JSON.stringify(respJson, null, 2);
+    renderOutput(output);
   };
 
   return (
-    <div class="flex flex-col h-screen">
-      <div class="p-2 flex flex-row items-center gap-3">
-        <select
-          value={selectedInv.value}
-          class="rounded py-1 px-4 text-gray-700 ring-1 ring-gray-200 active:ring-2 active:ring-gray-500"
-          onChange={(e) => {
-            selectedInv.value = e.currentTarget.value;
-          }}
-        >
-          <option
-            key="placeholder"
-            value=""
-            disabled
+    <div class="playground-shell">
+      <header class="playground-toolbar">
+        <div class="toolbar-left">
+          <select
+            value={selectedInv.value}
+            class="control-select"
+            onChange={(e) => {
+              selectedInv.value = e.currentTarget.value;
+            }}
           >
-            Select an invariant
-          </option>
-          {allInvs.value.map((inv) => (
-            <option value={inv} key={inv}>
-              {inv}
+            <option key="placeholder" value="" disabled>
+              Select an invariant
             </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          class="rounded px-4 py-1 font-bold text-gray-900 bg-gray-50 ring-1 ring-gray-400 hover:bg-gray-900 hover:text-gray-50 active:ring-gray-700 active:ring-2"
-          onClick={processText}
-        >
-          Verify
-        </button>
-        <div class="flex-grow"></div>
+            {allInvs.value.map((inv) => (
+              <option value={inv} key={inv}>
+                {inv}
+              </option>
+            ))}
+          </select>
 
-        <div class="flex flex-row divide-x-2 space-x-2 whitespace-pre">
-          <div class="flex flex-row">
-            <span>Made with</span>
-            <a
-              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
-              href="https://apalache.informal.systems"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <span class="inline-flex h-4 items-center">Apalache</span>
-              <MountainIcon />
-            </a>
-            <span>and</span>
-            <a
-              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
-              href="https://fresh.deno.dev"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <span class="inline-flex h-4 items-center">Fresh</span>
-              <CitrusIcon />
-            </a>
-          </div>
-          <div class="pl-2">
-            <a
-              class="flex flex-row items-center gap-1 leading-none hover:(opacity-70)"
-              href="https://github.com/rnbguy/fresh-playground"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <span class="inline-flex h-4 items-center">View Source</span>
-              <GithubIcon />
-            </a>
-          </div>
+          <button
+            type="button"
+            class="verify-button icon-button"
+            onClick={processText}
+            title="Run verification"
+            aria-label="Run verification"
+          >
+            <Play aria-hidden="true" class="icon-stroke" size={16} />
+          </button>
         </div>
-      </div>
-      <div class="min-h-screen min-w-screen flex flex-col md:flex-row">
-        <div
-          class="flex-1"
-          ref={editorRef}
+
+        <div class="toolbar-right">
+          <div class="menu-wrap">
+            <button
+              type="button"
+              class="theme-button icon-button"
+              title="Code font"
+              aria-label="Code font"
+              onClick={() => {
+                fontMenuOpen.value = !fontMenuOpen.value;
+                themeMenuOpen.value = false;
+              }}
+            >
+              <Type aria-hidden="true" class="icon-stroke" size={15} />
+            </button>
+            {fontMenuOpen.value && (
+              <div class="menu-panel" role="menu" aria-label="Font menu">
+                {([
+                  "fira",
+                  "jetbrains",
+                  "ibm",
+                  "iosevka",
+                  "inconsolata",
+                ] as CodeFont[]).map((font) => (
+                  <button
+                    key={font}
+                    type="button"
+                    class={`menu-item ${
+                      selectedFont.value === font ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      selectedFont.value = font;
+                      fontMenuOpen.value = false;
+                    }}
+                  >
+                    {font === "ibm"
+                      ? "IBM Plex"
+                      : font === "jetbrains"
+                      ? "JetBrains"
+                      : font === "inconsolata"
+                      ? "Inconsolata"
+                      : font === "iosevka"
+                      ? "Iosevka"
+                      : "Fira"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div class="menu-wrap">
+            <button
+              type="button"
+              class="theme-button icon-button"
+              title="Color theme"
+              aria-label="Color theme"
+              onClick={() => {
+                themeMenuOpen.value = !themeMenuOpen.value;
+                fontMenuOpen.value = false;
+              }}
+            >
+              <Palette aria-hidden="true" class="icon-stroke" size={15} />
+            </button>
+            {themeMenuOpen.value && (
+              <div class="menu-panel" role="menu" aria-label="Theme menu">
+                {THEME_PAIR_OPTIONS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    class={`menu-item ${
+                      selectedThemePair.value === key ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      selectedThemePair.value = key;
+                      themeMenuOpen.value = false;
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            class="theme-button icon-button"
+            onClick={toggleTheme}
+            title="Toggle theme"
+            aria-label="Toggle darkness mode"
+          >
+            {darknessMode.value === "dark" ? <MoonIcon /> : <SunIcon />}
+          </button>
+        </div>
+      </header>
+
+      <main class="playground-main">
+        <section ref={editorRef} class="editor-pane"></section>
+        <section class="output-pane" aria-live="polite">
+          {loadingText.value && <div class="output-status">{loadingText}</div>}
+          <section ref={outputRef} class="output-editor"></section>
+          {!consoleText.value.trim() && (
+            <pre class="output-text">{consoleText}</pre>
+          )}
+          <pre class="output-error">{errorText}</pre>
+        </section>
+      </main>
+
+      <footer class="playground-footer">
+        <div class="footer-group">
+          <span>Made with</span>
+          <a
+            class="footer-link"
+            href="https://apalache-mc.org"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span>Apalache</span>
+            <MountainIcon />
+          </a>
+          <span>,</span>
+          <a
+            class="footer-link"
+            href="https://fresh.deno.dev"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span>Fresh</span>
+            <CitrusIcon />
+          </a>
+          <span>,</span>
+          <a
+            class="footer-link"
+            href="https://deno.com"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span>Deno</span>
+            <DenoIcon />
+          </a>
+        </div>
+        <a
+          class="footer-link"
+          href="https://github.com/rnbguy/fresh-playground"
+          rel="noopener noreferrer"
+          target="_blank"
         >
-        </div>
-        <div class="flex-1 overflow-auto whitespace-pre pl-4 font-mono text-sm">
-          {loadingText}
-          {consoleText}
-          {errorText}
-        </div>
-      </div>
+          <span>View Source</span>
+          <GithubIcon />
+        </a>
+      </footer>
     </div>
   );
 }

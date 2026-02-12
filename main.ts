@@ -1,6 +1,10 @@
+import { h } from "preact";
 import { App, staticFiles } from "fresh";
 import type { State } from "./utils.ts";
 import { getSharedApalache } from "./utils/apalache_shared.ts";
+
+// Make h available globally for JSX compilation
+(globalThis as Record<string, unknown>).h = h;
 
 export const app = new App<State>();
 
