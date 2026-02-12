@@ -14,5 +14,11 @@ export default defineConfig({
   ],
   build: {
     minify: false,
+    rollupOptions: {
+      external: ["protobufjs", "@grpc/grpc-js", "@grpc/proto-loader"],
+    },
+  },
+  ssr: {
+    external: ["protobufjs", "@grpc/grpc-js", "@grpc/proto-loader"],
   },
 });
