@@ -23,15 +23,18 @@ type RunResponse =
 type PingResponse = Record<number, never>;
 type RpcError = grpc.ServiceError | Error | null;
 type TarEntryLike = TarStreamEntry & { type?: string; fileName?: string };
+type RpcCallOptions = { deadline: Date };
 
 type CmdExecutor = {
   new (url: string, creds: grpc.ChannelCredentials): CmdExecutor;
   run: (
     req: RunRequest,
+    options: RpcCallOptions,
     callback: (err: RpcError, res: RunResponse) => void,
   ) => void;
   ping: (
     req: PingRequest,
+    options: RpcCallOptions,
     callback: (err: RpcError, res: PingResponse) => void,
   ) => void;
 };
@@ -56,6 +59,7 @@ export class Apalache {
   version: string | undefined;
   process: Deno.ChildProcess | undefined;
   client: CmdExecutor | undefined;
+  private readonly rpcDeadlineMs = 5_000;
 
   async setVersion(version: string) {
     if (version === "latest") {
@@ -187,7 +191,9 @@ export class Apalache {
     }
 
     return await new Promise<RunResponse>((resolve, reject) => {
-      client.run(req, (err, res) => {
+      client.run(req, {
+        deadline: new Date(Date.now() + this.rpcDeadlineMs),
+      }, (err, res) => {
         if (err) {
           reject(err);
           return;
@@ -204,7 +210,9 @@ export class Apalache {
     }
 
     return await new Promise<PingResponse>((resolve, reject) => {
-      client.ping(req, (err, res) => {
+      client.ping(req, {
+        deadline: new Date(Date.now() + this.rpcDeadlineMs),
+      }, (err, res) => {
         if (err) {
           reject(err);
           return;
