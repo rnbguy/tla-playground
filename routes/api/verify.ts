@@ -1,5 +1,11 @@
 import { define } from "../../utils.ts";
 
+const VERIFY_CACHE_TTL_MS = 5_000;
+const verifyCache = new Map<
+  string,
+  { value: Record<string, unknown>; expiresAt: number }
+>();
+
 export const handler = define.handlers({
   async POST(ctx): Promise<Response> {
     const req = ctx.req;
@@ -12,6 +18,13 @@ export const handler = define.handlers({
         status: 503,
       });
     }
+
+    const cacheKey = `${jsonData.tla}::${jsonData.inv}`;
+    const cached = verifyCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return Response.json(cached.value);
+    }
+
     const respJson = await apalache.modelCheck(
       jsonData.tla,
       jsonData.inv,
@@ -48,6 +61,10 @@ export const handler = define.handlers({
     }
 
     outJson.description = `Created by Apalache on ${new Date().toUTCString()}`;
+    verifyCache.set(cacheKey, {
+      value: outJson,
+      expiresAt: Date.now() + VERIFY_CACHE_TTL_MS,
+    });
 
     return Response.json(outJson);
   },
