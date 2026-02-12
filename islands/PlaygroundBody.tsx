@@ -9,6 +9,80 @@ interface PlaygroundProps {
   out: string;
 }
 
+type MonacoEditor = {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  addCommand: (keybinding: number, handler: () => void) => void;
+  dispose: () => void;
+};
+
+type MonacoNamespace = {
+  KeyMod: { CtrlCmd: number };
+  KeyCode: { Enter: number };
+  languages: {
+    register: (language: { id: string }) => void;
+    setMonarchTokensProvider: (id: string, language: unknown) => void;
+  };
+  editor: {
+    create: (
+      element: HTMLElement,
+      options: Record<string, unknown>,
+    ) => MonacoEditor;
+  };
+};
+
+type MonacoRequire = {
+  config: (config: { paths: { vs: string } }) => void;
+  (deps: string[], callback: (monaco: MonacoNamespace) => void): void;
+};
+
+let monacoLoaderPromise: Promise<void> | null = null;
+
+function loadMonacoLoader(): Promise<void> {
+  if (!monacoLoaderPromise) {
+    monacoLoaderPromise = new Promise<void>((resolve, reject) => {
+      const runtime = globalThis as unknown as { require?: MonacoRequire };
+      if (typeof runtime.require === "function") {
+        resolve();
+        return;
+      }
+
+      if (!document.getElementById("monaco-editor-main-css")) {
+        const css = document.createElement("link");
+        css.id = "monaco-editor-main-css";
+        css.rel = "stylesheet";
+        css.href =
+          "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/editor/editor.main.css";
+        document.head.appendChild(css);
+      }
+
+      const existingScript = document.getElementById("monaco-loader-script");
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(), { once: true });
+        existingScript.addEventListener("error", () => reject(new Error("Failed to load Monaco loader")), {
+          once: true,
+        });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = "monaco-loader-script";
+      script.src = "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs/loader.js";
+      script.async = true;
+      script.addEventListener("load", () => resolve(), { once: true });
+      script.addEventListener("error", () => reject(new Error("Failed to load Monaco loader")), {
+        once: true,
+      });
+      document.head.appendChild(script);
+    }).catch((error) => {
+      monacoLoaderPromise = null;
+      throw error;
+    });
+  }
+
+  return monacoLoaderPromise;
+}
+
 function MountainIcon() {
   return (
     <svg
@@ -325,30 +399,32 @@ const TLAPlusMonarchLanguage = {
 };
 
 export default function PlaygroundBody(props: PlaygroundProps) {
-  const editorRef = useRef(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const editor = useRef<MonacoEditor | null>(null);
+  const pollingTimerRef = useRef<number | null>(null);
 
   const loadingText = signal("");
   const consoleText = signal("");
   const errorText = signal("");
 
   const selectedInv = signal("");
-  const allInvs = signal([]);
+  const allInvs = signal<string[]>([]);
 
   const allInvsOption = computed(() => {
     const options = [
       <option
         value=""
         disabled
-        selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
-      >
-        Select an invariant
-      </option>,
+          selected={!(allInvs.value && allInvs.value.includes(selectedInv.value))}
+        >
+          Select an invariant
+        </option>,
     ];
 
     if (allInvs.value && allInvs.value.length > 0) {
       options.push(
         ...allInvs.value.map((inv) => (
-          <option value={inv} selected={selectedInv.value === inv}>
+          <option value={inv} key={inv}>
             {inv}
           </option>
         )),
@@ -357,32 +433,54 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
     return options;
   });
-
-  let editor = null;
-
   useEffect(() => {
-    let initTla = JSON.parse(localStorage.getItem("tla-snippet")!) ?? props;
-    if (initTla.tla.length === 0) {
-      initTla = props;
+    let isDisposed = false;
+
+    let initTla: PlaygroundProps = props;
+    const rawStoredSnippet = localStorage.getItem("tla-snippet");
+    if (rawStoredSnippet) {
+      try {
+        const parsed = JSON.parse(rawStoredSnippet) as PlaygroundProps;
+        if (parsed.tla.length > 0) {
+          initTla = parsed;
+        }
+      } catch {
+        initTla = props;
+      }
     }
 
     consoleText.value = initTla.out;
 
-    require.config({
-      paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
-    });
+    void loadMonacoLoader().then(() => {
+      if (isDisposed) {
+        return;
+      }
 
-    require(
-      ["vs/editor/editor.main"],
-      function (monaco) {
-        monaco.languages.register({ id: "tla" });
+      const runtime = globalThis as unknown as { require?: MonacoRequire };
+      if (typeof runtime.require !== "function") {
+        errorText.value = "> Monaco loader not available";
+        return;
+      }
+
+      runtime.require.config({
+        paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor/min/vs" },
+      });
+
+      runtime.require(
+        ["vs/editor/editor.main"],
+        function (monaco: MonacoNamespace) {
+          if (isDisposed || !editorRef.current) {
+            return;
+          }
+
+          monaco.languages.register({ id: "tla" });
 
         monaco.languages.setMonarchTokensProvider(
           "tla",
           TLAPlusMonarchLanguage,
         );
 
-        editor = monaco.editor.create(editorRef.current, {
+          editor.current = monaco.editor.create(editorRef.current, {
           language: "tla",
           readOnly: false,
           automaticLayout: true,
@@ -401,57 +499,80 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           overviewRulerLanes: 0,
         });
 
-        if (globalThis.location.hash) {
-          const gistId = globalThis.location.hash.substring(1);
-          fetch(`https://api.github.com/gists/${gistId}`)
+          if (globalThis.location.hash) {
+            const gistId = globalThis.location.hash.substring(1);
+            fetch(`https://api.github.com/gists/${gistId}`, {
+              signal: AbortSignal.timeout(4000),
+            })
             .then((value) => value.json())
             .then((json) => {
-              editor.setValue(Object.values(json.files)[0].content);
+              const firstFile = Object.values(json.files)[0] as { content?: string };
+              editor.current?.setValue(firstFile.content ?? initTla.tla.trimStart());
             })
             .catch((error) => {
               console.error(error);
               globalThis.location.hash = "";
-              editor.setValue(initTla.tla.trimStart());
+              editor.current?.setValue(initTla.tla.trimStart());
             });
-        } else {
-          editor.setValue(initTla.tla.trimStart());
-        }
-        editor.addCommand(
-          monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-          processText,
-        );
+          } else {
+            editor.current.setValue(initTla.tla.trimStart());
+          }
 
-        allInvs.value = initTla.invs;
-        selectedInv.value = initTla.inv;
+          editor.current.addCommand(
+            monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+            processText,
+          );
 
-        setInterval(async () => {
-          const tla = editor.getValue();
+          allInvs.value = initTla.invs;
+          selectedInv.value = initTla.inv;
 
-          const storedTla = JSON.parse(localStorage.getItem("tla-snippet")!);
-
-          if (storedTla && storedTla.tla !== tla) {
-            const invariants = await tlaInvariants({ tla });
-
-            allInvs.value = invariants;
-
-            if (!invariants.includes(selectedInv.value)) {
-              selectedInv.value = invariants[invariants.length - 1];
+          pollingTimerRef.current = globalThis.setInterval(async () => {
+            const currentEditor = editor.current;
+            if (!currentEditor) {
+              return;
             }
 
-            localStorage.setItem(
-              "tla-snippet",
-              JSON.stringify({
-                tla,
-                invs: allInvs.value,
-                inv: selectedInv.value,
-                out: consoleText.value,
-              }),
-            );
-          }
-        }, 2000);
-      },
-    );
-  });
+            const tla = currentEditor.getValue();
+            const storedSnippet = localStorage.getItem("tla-snippet");
+            const storedTla = storedSnippet ? JSON.parse(storedSnippet) as { tla?: string } : null;
+
+            if (storedTla && storedTla.tla !== tla) {
+              const invariants = await tlaInvariants({ tla });
+
+              allInvs.value = invariants;
+
+              if (!invariants.includes(selectedInv.value)) {
+                selectedInv.value = invariants[invariants.length - 1] ?? "";
+              }
+
+              localStorage.setItem(
+                "tla-snippet",
+                JSON.stringify({
+                  tla,
+                  invs: allInvs.value,
+                  inv: selectedInv.value,
+                  out: consoleText.value,
+                }),
+              );
+            }
+          }, 5000);
+        },
+      );
+    }).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      errorText.value = `> ${message}`;
+    });
+
+    return () => {
+      isDisposed = true;
+      if (pollingTimerRef.current !== null) {
+        globalThis.clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+      editor.current?.dispose();
+      editor.current = null;
+    };
+  }, []);
 
   async function ping(): Promise<any> {
     try {
@@ -462,7 +583,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         },
       }).then((resp) => resp.json());
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -493,12 +614,17 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         body: JSON.stringify(data),
       }).then((resp) => resp.json());
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   const processText = async () => {
-    const tla = editor.getValue();
+    const currentEditor = editor.current;
+    if (!currentEditor) {
+      return;
+    }
+
+    const tla = currentEditor.getValue();
 
     const pingResp = await ping();
     if (pingResp.status !== "ok") {
@@ -517,18 +643,14 @@ export default function PlaygroundBody(props: PlaygroundProps) {
       errorText.value = "";
       consoleText.value = "";
 
-      const spinnerTimer = setInterval(
-        function x() {
-          loadingText.value = `> processing ${spinner.next()}`;
-          return x;
-        }(),
-        100,
-      );
+      const spinnerTimer = globalThis.setInterval(() => {
+        loadingText.value = `> processing ${spinner.next()}`;
+      }, 200);
       consoleText.value = "";
       const data = { tla, inv: selectedInv.value };
       const respJson = await tlaVerify(data);
 
-      clearInterval(spinnerTimer);
+      globalThis.clearInterval(spinnerTimer);
       loadingText.value = "";
 
       consoleText.value = yaml.stringify(respJson, { indent: 2 });
@@ -539,12 +661,16 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     <div class="flex flex-col h-screen">
       <div class="p-2 flex flex-row items-center gap-3">
         <select
+          value={selectedInv.value}
           class="rounded py-1 px-4 text-gray-700 ring-1 ring-gray-200 active:ring-2 active:ring-gray-500"
-          onChange={(e) => selectedInv.value = e.target.value}
+          onChange={(e) => {
+            selectedInv.value = e.currentTarget.value;
+          }}
         >
           {allInvsOption}
         </select>
         <button
+          type="button"
           class="rounded px-4 py-1 font-bold text-gray-900 bg-gray-50 ring-1 ring-gray-400 hover:bg-gray-900 hover:text-gray-50 active:ring-gray-700 active:ring-2"
           onClick={processText}
         >
