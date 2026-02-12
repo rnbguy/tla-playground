@@ -1,21 +1,14 @@
-FROM archlinux
 
-RUN pacman -Syu deno jre-openjdk-headless vim zellij --needed --noconfirm
+FROM denoland/deno:latest
 
-RUN mkdir /fresh-playground
+ARG GIT_REVISION
+ENV DENO_DEPLOYMENT_ID=${GIT_REVISION}
 
-WORKDIR /fresh-playground
+WORKDIR /app
 
-ADD . .
-
-RUN cp .env.example .env
-
-ONBUILD RUN deno cache main.ts --import-map=import_map.json
-
-RUN mkdir certs
+COPY . .
+RUN deno cache _fresh/server.js
 
 EXPOSE 8000
 
-CMD deno run -A --watch=static/,routes/,certs/ main.ts
-
-# docker run -p 8000:8000 ghcr.io/rnbguy/fresh-playground:main
+CMD ["serve", "-A", "_fresh/server.js"]
