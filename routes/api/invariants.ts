@@ -5,6 +5,9 @@ export const handler = define.handlers({
     const req = ctx.req;
     const jsonData = await req.json();
     const apalache = ctx.state.apalache;
+    if (!apalache) {
+      return Response.json({ error: "Apalache server unavailable" }, { status: 503 });
+    }
     const respJson = await apalache.modelTypeCheck(
       jsonData.tla,
     );

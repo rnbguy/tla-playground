@@ -7,6 +7,9 @@ export const handler = define.handlers({
 
     const bmcLength = 10;
     const apalache = ctx.state.apalache;
+    if (!apalache) {
+      return Response.json({ error: "Apalache server unavailable" }, { status: 503 });
+    }
     const respJson = await apalache.modelCheck(
       jsonData.tla,
       jsonData.inv,

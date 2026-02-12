@@ -8,7 +8,11 @@ app.use(staticFiles());
 
 app.use(async (ctx) => {
   if (ctx.url.pathname.startsWith("/api/")) {
-    ctx.state.apalache = await getSharedApalache();
+    try {
+      ctx.state.apalache = await getSharedApalache();
+    } catch {
+      ctx.state.apalache = null;
+    }
   }
 
   return await ctx.next();
