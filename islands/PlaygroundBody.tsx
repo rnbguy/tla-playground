@@ -717,8 +717,6 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           scheduleInvariantSync,
         );
 
-        scheduleInvariantSync();
-
         const previousDispose = editor.current.dispose.bind(editor.current);
         editor.current.dispose = () => {
           changeSubscription.dispose();
