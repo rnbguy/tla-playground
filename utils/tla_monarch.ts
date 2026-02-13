@@ -1,241 +1,235 @@
 export const TLAPlusMonarchLanguage = {
-  // defaultToken: "invalid",
   defaultToken: "",
 
-  // keywords
   keywords: [
-    "EXTENDS",
-    "VARIABLE",
-    "VARIABLES",
-    "LET",
-    "IN",
-    "EXCEPT",
-    "ENABLED",
-    "UNCHANGED",
-    "LAMBDA",
-    "DOMAIN",
-    "CONSTANT",
-    "CONSTANTS",
-    "CHOOSE",
-    "LOCAL",
     "ASSUME",
     "ASSUMPTION",
-    "AXIOM",
-    "RECURSIVE",
-    "INSTANCE",
-    "WITH",
-    "THEOREM",
-    "SUBSET",
-    "UNION",
-    "SF_",
-    "WF_",
-    "USE",
-    "DEFS",
-    "BY",
-    "DEF",
-    "SUFFICES",
-    "PROVE",
-    "OBVIOUS",
-    "NEW",
-    "QED",
-    "RECURSIVE",
-    "PICK",
-    "HIDE",
-    "DEFINE",
-    "WITNESS",
-    "HAVE",
-    "TAKE",
-    "PROOF",
     "ACTION",
+    "AXIOM",
+    "BY",
+    "CHOOSE",
+    "CONSTANT",
+    "CONSTANTS",
     "COROLLARY",
+    "DEF",
+    "DEFS",
+    "DEFINE",
+    "DOMAIN",
+    "ENABLED",
+    "EXCEPT",
+    "EXTENDS",
+    "HAVE",
+    "HIDE",
+    "IN",
+    "INSTANCE",
+    "LAMBDA",
     "LEMMA",
+    "LET",
+    "LOCAL",
+    "MODULE",
+    "NEW",
+    "OBVIOUS",
     "OMITTED",
     "ONLY",
+    "PICK",
+    "PROOF",
     "PROPOSITION",
+    "PROVE",
+    "QED",
+    "RECURSIVE",
     "STATE",
+    "SUBSET",
+    "SUFFICES",
+    "TAKE",
     "TEMPORAL",
+    "THEOREM",
+    "UNCHANGED",
+    "UNION",
+    "USE",
+    "VARIABLE",
+    "VARIABLES",
+    "WITH",
+    "WITNESS",
   ],
 
-  // control_keywords
   controlKeywords: ["IF", "THEN", "ELSE", "CASE", "OTHER"],
 
-  // predefined constants
-  constants: ["TRUE", "FALSE", "Nat"],
+  constants: ["TRUE", "FALSE", "BOOLEAN", "STRING", "Nat", "Int", "Real"],
 
-  // operators
   operators: [
     "/\\",
     "\\/",
-    "=",
-    ">",
-    "<",
-    "!",
     "~",
-    "?",
-    ":",
-    "==",
+    "=>",
+    "<=>",
+    "=",
+    "#",
+    "/=",
+    "<",
+    ">",
     "<=",
     ">=",
-    "!=",
-    "&&",
-    "||",
-    "++",
-    "--",
     "+",
     "-",
     "*",
     "/",
-    "&",
-    "|",
     "^",
-    "%",
     "<<",
     ">>",
-    ">>>",
-    "+=",
-    "-=",
-    "*=",
-    "/=",
-    "&=",
-    "|=",
-    "^=",
-    "%=",
-    "<<=",
-    ">>=",
-    ">>>=",
+    "~>",
+    "-+->",
+    "|->",
+    "->",
+    ":>",
+    "<:",
+    "::",
+    "==",
+    "!",
+    "?",
   ],
 
-  types: [
-    "Bool",
-    "Int",
-    "Str",
-    "Set",
-    "Seq",
-  ],
+  types: ["Bool", "Str", "Set", "Seq", "Variant"],
 
-  // symbols
-  symbols: /[=><!~?:&|+\-*\/\^%]+/,
+  symbols: /[=><!~?:&|+\-*\/\^#\\]+/,
 
-  escapes:
-    /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+  escapes: /\\[\\"tnfr]/,
 
   tokenizer: {
     root: [
       { include: "@whitespace" },
-      // module start
-      // ---- MODULE name ----
-      [/(-{4,})(\s*MODULE\s*)(\w+)(\s*-{4,})/, [
-        "comment",
-        "keyword",
-        "type.indentifier.class",
-        "comment",
-      ]],
-      // module end
-      // ====
+
+      // Module header: ---- MODULE Name ----
+      [
+        /(-{4,})(\s*MODULE\s*)(\w+)(\s*-{4,})/,
+        ["comment", "keyword", "type.identifier", "comment"],
+      ],
+      // Module footer: ====
       [/={4,}\s*/, "comment"],
-      // type def in comment
-      // @type, @typeAlias
-      [/@@type(Alias)?\:/, "tag.id.pug"],
-      // custom types
-      // $myType
-      [/\$\b\w+\b/, "type"],
-      // single line comment
-      // \* comment
+
+      // Apalache type annotations: @type: or @typeAlias:
+      [/@@type(?:Alias)?:/, "annotation"],
+      // Apalache custom type references: $myType
+      [/\$\w+\b/, "type"],
+
+      // Comments (must come before operators to catch \* and (* first)
       [/\\\*/, "comment", "@lineComment"],
-      // multi line comment
-      // (* comment *)
       [/\(\*/, "comment", "@blockComment"],
-      // non-teminated string
+
+      // Strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // string
       [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
-      // characters
-      [/'[^\\']'/, "string"],
-      [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
-      [/'/, "string.invalid"],
-      // embedded_operators
-      // \in \div
-      [/\\[a-zA-Z]+\b/, "operator.scss"],
-      // brackets
-      [/[\{\}\(\)\[\]]/, "delimiter.xml"],
-      [/[<>](?!@symbols)/, "delimiter.xml"],
-      // symbols operators
-      [/[=><!~?:&|+\-*\/\^%\\]+/, { cases: { "@operators": "operator.scss" } }],
-      // delimiter
-      [/[;,.]/, "delimiter.xml"],
-      // numeric_constants
-      // 12 b10 o73 h4a
+
+      // Numeric constants (before embedded operators to handle \b, \o, \h prefixes)
+      [/\\[bB][01]+/, "number.binary"],
+      [/\\[oO][0-7]+/, "number.octal"],
+      [/\\[hH][0-9a-fA-F]+/, "number.hex"],
+      [/\b\d+\b/, "number"],
+
+      // Embedded backslash operators: \in, \cup, \div, etc.
+      [/\\[a-zA-Z]+\b/, "operator"],
+
+      // Fairness operators: SF_expr(action), WF_expr(action)
+      [/[SW]F_/, "keyword"],
+
+      // Temporal box operator []
+      [/\[\]/, "operator"],
+
+      // Range and ellipsis operators
+      [/\.\.\.?/, "operator"],
+
+      // Function merge operator @@ (in Monarch, @@ means literal @, so @@@@ matches @@)
+      [/@@@@/, "operator"],
+
+      // EXCEPT @ operator (single @ not followed by another @)
+      [/@@(?!@@)/, "operator"],
+
+      // Brackets
+      [/[\{\}\(\)\[\]]/, "delimiter.bracket"],
+      [/[<>](?!@symbols)/, "delimiter.bracket"],
+
+      // Symbol-sequence operators (check against operators list)
+      [/@symbols/, { cases: { "@operators": "operator", "@default": "" } }],
+
+      // Delimiters
+      [/[;,.]/, "delimiter"],
+
+      // Instance definitions: Foo == INSTANCE ModName
       [
-        /(?:\b\d+|\\(?:b|B)[01]+|\\(?:o|O)[0-7]+|\\(?:h|H)[0-9a-fA-F]+)\b/,
-        "number.hex",
+        /(\w+)(\s*==\s*)(INSTANCE\b)/,
+        ["variable", "operator", "keyword"],
       ],
-      // var_definitions
-      //
-      [/(\w+)(\s*==(?!\s*INSTANCE|==))/, ["variable", "operator.scss"]],
-      // postfix_operator_definitions
-      [/(\w+)(\s*\^\+|\^\*|\^#\s*)(==(?!==))/, [
-        "variable",
-        "operator.sql",
-        "operator.scss",
-      ]],
-      // binary_operator_definitions
+      // Operator/variable definitions: Foo ==
+      [/(\w+)(\s*==(?!\s*INSTANCE|==))/, ["variable", "operator"]],
+      // Postfix operator definitions: Foo^+ ==
       [
-        /(\w+)(\s*(\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+\s)\s*\w+)\s*==(?!==)/,
-        ["variable", "operator.sql", "operator.scss"],
+        /(\w+)(\s*(?:\^\+|\^\*|\^#)\s*)(==(?!==))/,
+        ["variable", "operator", "operator"],
       ],
-      // // function_definitions
-      // [/(\w+\s*)(\[)(.*(?<!=)==(?!=))/, ["operator", "bracket", "invalid"]],
-      // operators
-      // MyOperator(arg1, arg2)
+      // Binary operator definitions: a \oplus b ==
+      [
+        /(\w+)(\s*(?:\(?[-<:>=&@\/%#!X\$\*\+\.\|\?\^\\]+\)?|\\[a-z]+)\s+\w+\s*)(==(?!==))/,
+        ["variable", "operator", "operator"],
+      ],
+
+      // Apalache type constructors: Set(...), Seq(...), Variant(...)
+      [/\b(?:Bool|Str|Set|Seq|Variant)\b/, "type"],
+
+      // Operator application: MyOp(arg1, arg2)
       [/\w+\s*(?=\((?!\*))/, "variable"],
-      // inst_modules
-      [/(\w+)(\s*==\s*)(INSTANCE\b)/, ["variable", "operator.scss", "keyword"]],
-      // inst_module_refs
-      [/\b\w+\s*!(?=\w)/, "metatag.html"],
-      // primed_operators
-      // var' = var + 1
-      [/(\b\w+)(')/, ["variable", "predefined.sql"]],
-      // except_vars
-      [/(?<=EXCEPT.*[^@])(@|!)(?!@)/, "predefined.sql"],
-      // keywords
-      [/\b\w+\b/, {
-        cases: {
-          "@keywords": "keyword",
-          "@controlKeywords": "keyword",
-          "@constants": "keyword.json",
-          "@types": "type",
-          "@default": "identifier",
+
+      // Module reference prefix: Mod!Op
+      [/\b\w+\s*!(?=\w)/, "namespace"],
+
+      // Primed variables: var'
+      [/(\b\w+)(')/, ["variable", "operator"]],
+
+      // Prime operator standalone (for cases like (expr)')
+      [/'/, "operator"],
+
+      // Keywords and identifiers (catch-all for words)
+      [
+        /\b\w+\b/,
+        {
+          cases: {
+            "@keywords": "keyword",
+            "@controlKeywords": "keyword.control",
+            "@constants": "constant",
+            "@types": "type",
+            "@default": "identifier",
+          },
         },
-      }],
+      ],
     ],
-    whitespace: [
-      [/[ \t\r\n]+/, "white"],
-    ],
+
+    whitespace: [[/[ \t\r\n]+/, "white"]],
+
     string: [
       [/[^\\"]+/, "string"],
       [/@escapes/, "string.escape"],
       [/\\./, "string.escape.invalid"],
       [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
     ],
+
     lineComment: [
-      [/\\\*/, "comment", "@push"],
-      [/(?=@@type(?:Alias)?)/, "comment", "@lineType"],
-      [/;$/, "delimiter.xml", "@pop"],
+      [/(?=@@type(?:Alias)?)/, "", "@lineType"],
       [/.$/, "comment", "@pop"],
       [/./, "comment"],
     ],
+
     lineType: [
-      [/(?=.$)/, "comment", "@pop"],
+      [/(?=.$)/, "", "@pop"],
       { include: "@root" },
     ],
+
     blockComment: [
       [/\(\*/, "comment", "@push"],
-      [/(?=@@type(?:Alias)?)/, "comment", "@blockType"],
+      [/(?=@@type(?:Alias)?)/, "", "@blockType"],
       [/\*\)/, "comment", "@pop"],
       [/./, "comment"],
     ],
+
     blockType: [
-      [/(?=\*\))/, "comment", "@pop"],
+      [/(?=\*\))/, "", "@pop"],
       { include: "@root" },
     ],
   },
