@@ -1,4 +1,4 @@
-import { assertEquals, assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { TLAPlusMonarchLanguage } from "./tlaMonarch.ts";
 
 // Uses Monaco Editor's actual Monarch compiler and tokenizer.
@@ -114,7 +114,9 @@ Deno.test("keywords list has no duplicates", () => {
   assertEquals(
     keywords.length,
     unique.size,
-    `Duplicate keywords: ${keywords.filter((k: string, i: number) => keywords.indexOf(k) !== i)}`,
+    `Duplicate keywords: ${
+      keywords.filter((k: string, i: number) => keywords.indexOf(k) !== i)
+    }`,
   );
 });
 
@@ -129,8 +131,21 @@ Deno.test("MODULE is in keywords list", () => {
 
 Deno.test("operators list contains only valid TLA+ operators", () => {
   const invalidOps = [
-    ">>>", "+=", "-=", "*=", "&=", "|=", "^=", "%=", "<<=", ">>=", ">>>=",
-    "&&", "||", "++", "--",
+    ">>>",
+    "+=",
+    "-=",
+    "*=",
+    "&=",
+    "|=",
+    "^=",
+    "%=",
+    "<<=",
+    ">>=",
+    ">>>=",
+    "&&",
+    "||",
+    "++",
+    "--",
   ];
   for (const op of invalidOps) {
     assert(!lang.operators.includes(op), `${op} is not a valid TLA+ operator`);
@@ -138,9 +153,21 @@ Deno.test("operators list contains only valid TLA+ operators", () => {
 });
 
 Deno.test("operators list contains essential TLA+ operators", () => {
-  for (const op of [
-    "/\\", "\\/", "=>", "<=>", "~>", "|->", "->", ":>", "<:", "#", "==",
-  ]) {
+  for (
+    const op of [
+      "/\\",
+      "\\/",
+      "=>",
+      "<=>",
+      "~>",
+      "|->",
+      "->",
+      ":>",
+      "<:",
+      "#",
+      "==",
+    ]
+  ) {
     assert(lang.operators.includes(op), `${op} should be in operators list`);
   }
 });
@@ -179,7 +206,9 @@ Deno.test("no token class names with .scss, .xml, .pug, .html, .sql, .json suffi
   function collect(obj: unknown): void {
     if (typeof obj === "string") allTokenStrings.push(obj);
     else if (Array.isArray(obj)) obj.forEach(collect);
-    else if (obj && typeof obj === "object") Object.values(obj).forEach(collect);
+    else if (obj && typeof obj === "object") {
+      Object.values(obj).forEach(collect);
+    }
   }
   collect(lang.tokenizer);
 
@@ -387,7 +416,9 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
   );
 
   // ---- Declaration keywords ----
-  for (const kw of ["EXTENDS", "CONSTANT", "CONSTANTS", "VARIABLE", "VARIABLES"]) {
+  for (
+    const kw of ["EXTENDS", "CONSTANT", "CONSTANTS", "VARIABLE", "VARIABLES"]
+  ) {
     assertTokenType(tokens, kw, "keyword");
   }
   assertTokenType(tokens, "ASSUME", "keyword");
@@ -402,11 +433,26 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
   }
 
   // ---- More keywords ----
-  for (const kw of [
-    "CHOOSE", "LET", "IN", "LAMBDA", "DOMAIN", "SUBSET", "UNION",
-    "ENABLED", "LOCAL", "RECURSIVE", "UNCHANGED", "THEOREM", "PROOF",
-    "SUFFICES", "OBVIOUS", "QED",
-  ]) {
+  for (
+    const kw of [
+      "CHOOSE",
+      "LET",
+      "IN",
+      "LAMBDA",
+      "DOMAIN",
+      "SUBSET",
+      "UNION",
+      "ENABLED",
+      "LOCAL",
+      "RECURSIVE",
+      "UNCHANGED",
+      "THEOREM",
+      "PROOF",
+      "SUFFICES",
+      "OBVIOUS",
+      "QED",
+    ]
+  ) {
     assert(
       findTokens(tokens, kw).some((t) => t.type === "keyword.tla"),
       `${kw} should be keyword`,
@@ -424,7 +470,9 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
   );
 
   // ---- Boolean and set constants ----
-  for (const c of ["TRUE", "FALSE", "BOOLEAN", "STRING", "Nat", "Int", "Real"]) {
+  for (
+    const c of ["TRUE", "FALSE", "BOOLEAN", "STRING", "Nat", "Int", "Real"]
+  ) {
     assert(
       findTokens(tokens, c).some((t) => t.type === "constant.tla"),
       `${c} should be constant`,
@@ -450,7 +498,17 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
   for (const t of primeTokens) assertEquals(t.type, "operator.tla");
 
   // ---- Backslash operators ----
-  for (const op of ["\\in", "\\A", "\\E", "\\cup", "\\cap", "\\subseteq", "\\notin"]) {
+  for (
+    const op of [
+      "\\in",
+      "\\A",
+      "\\E",
+      "\\cup",
+      "\\cap",
+      "\\subseteq",
+      "\\notin",
+    ]
+  ) {
     assert(
       findTokens(tokens, op).some((t) => t.type === "operator.tla"),
       `${op} should be operator`,
@@ -526,11 +584,17 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
 
   // ---- Type annotations ----
   const typeAnnotations = findTokens(tokens, "@type:");
-  assert(typeAnnotations.length >= 2, "should find multiple @type: annotations");
+  assert(
+    typeAnnotations.length >= 2,
+    "should find multiple @type: annotations",
+  );
   for (const t of typeAnnotations) assertEquals(t.type, "annotation.tla");
 
   const typeAliasAnnotations = findTokens(tokens, "@typeAlias:");
-  assert(typeAliasAnnotations.length >= 1, "should find @typeAlias: annotation");
+  assert(
+    typeAliasAnnotations.length >= 1,
+    "should find @typeAlias: annotation",
+  );
   for (const t of typeAliasAnnotations) assertEquals(t.type, "annotation.tla");
 
   // ---- Apalache type references ----
@@ -582,4 +646,3 @@ Deno.test("comprehensive TLA+ spec — all syntax highlighting cases", () => {
     ", should be delimiter",
   );
 });
-
