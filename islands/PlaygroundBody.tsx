@@ -7,7 +7,7 @@ import IconBrandGithub from "@tabler/icons-preact/IconBrandGithub.mjs";
 import IconLemon from "@tabler/icons-preact/IconLemon.mjs";
 import IconMountain from "@tabler/icons-preact/IconMountain.mjs";
 
-import { TLAPlusMonarchLanguage } from "../utils/tla_monarch.ts";
+import { TLAPlusMonarchLanguage } from "../utils/tlaMonarch.ts";
 
 interface PlaygroundProps {
   tla: string;
