@@ -177,8 +177,33 @@ const MONACO_CSS =
   `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/min/vs/editor/editor.main.css`;
 
 let monacoLoadPromise: Promise<MonacoNamespace> | null = null;
-let shikiMonacoThemePromise: Promise<void> | null = null;
 let shikiHighlighter: import("@shikijs/core").HighlighterCore | null = null;
+let shikiLoadPromise: Promise<void> | null = null;
+
+const THEME_LOADERS: Record<string, () => Promise<unknown>> = {
+  "vitesse-light": () => import("@shikijs/themes/vitesse-light"),
+  "vitesse-dark": () => import("@shikijs/themes/vitesse-dark"),
+  "github-light": () => import("@shikijs/themes/github-light"),
+  "github-dark": () => import("@shikijs/themes/github-dark"),
+  "night-owl-light": () => import("@shikijs/themes/night-owl-light"),
+  "night-owl": () => import("@shikijs/themes/night-owl"),
+  "rose-pine-dawn": () => import("@shikijs/themes/rose-pine-dawn"),
+  "rose-pine-moon": () => import("@shikijs/themes/rose-pine-moon"),
+  "catppuccin-latte": () => import("@shikijs/themes/catppuccin-latte"),
+  "catppuccin-mocha": () => import("@shikijs/themes/catppuccin-mocha"),
+  "solarized-light": () => import("@shikijs/themes/solarized-light"),
+  "solarized-dark": () => import("@shikijs/themes/solarized-dark"),
+  "light-plus": () => import("@shikijs/themes/light-plus"),
+  "dark-plus": () => import("@shikijs/themes/dark-plus"),
+  "one-light": () => import("@shikijs/themes/one-light"),
+  "one-dark-pro": () => import("@shikijs/themes/one-dark-pro"),
+  "gruvbox-light-medium": () => import("@shikijs/themes/gruvbox-light-medium"),
+  "gruvbox-dark-medium": () => import("@shikijs/themes/gruvbox-dark-medium"),
+  "kanagawa-lotus": () => import("@shikijs/themes/kanagawa-lotus"),
+  "kanagawa-wave": () => import("@shikijs/themes/kanagawa-wave"),
+};
+
+const loadedThemes = new Set<string>();
 
 function loadMonaco(): Promise<MonacoNamespace> {
   if (!monacoLoadPromise) {
@@ -210,53 +235,61 @@ function loadMonaco(): Promise<MonacoNamespace> {
   return monacoLoadPromise;
 }
 
-async function setupShikiThemes(monaco: MonacoNamespace): Promise<void> {
-  if (!shikiMonacoThemePromise) {
-    shikiMonacoThemePromise = (async () => {
-      const [{ createHighlighterCore }, { createJavaScriptRegexEngine }, {
-        shikiToMonaco,
-      }] = await Promise.all([
-        import("@shikijs/core"),
-        import("@shikijs/engine-javascript"),
-        import("@shikijs/monaco"),
-      ]);
-
-      const highlighter = await createHighlighterCore({
-        themes: [
-          import("@shikijs/themes/vitesse-light"),
-          import("@shikijs/themes/vitesse-dark"),
-          import("@shikijs/themes/github-light"),
-          import("@shikijs/themes/github-dark"),
-          import("@shikijs/themes/night-owl-light"),
-          import("@shikijs/themes/night-owl"),
-          import("@shikijs/themes/rose-pine-dawn"),
-          import("@shikijs/themes/rose-pine-moon"),
-          import("@shikijs/themes/catppuccin-latte"),
-          import("@shikijs/themes/catppuccin-mocha"),
-          import("@shikijs/themes/solarized-light"),
-          import("@shikijs/themes/solarized-dark"),
-          import("@shikijs/themes/light-plus"),
-          import("@shikijs/themes/dark-plus"),
-          import("@shikijs/themes/one-light"),
-          import("@shikijs/themes/one-dark-pro"),
-          import("@shikijs/themes/gruvbox-light-medium"),
-          import("@shikijs/themes/gruvbox-dark-medium"),
-          import("@shikijs/themes/kanagawa-lotus"),
-          import("@shikijs/themes/kanagawa-wave"),
-        ],
-        langs: [],
-        engine: createJavaScriptRegexEngine(),
-      });
-
-      shikiToMonaco(highlighter, monaco);
-      shikiHighlighter = highlighter;
-    })().catch((error) => {
-      shikiMonacoThemePromise = null;
-      throw error;
-    });
+async function initShikiWithTheme(
+  monaco: MonacoNamespace,
+  initialTheme: string,
+): Promise<void> {
+  if (shikiLoadPromise) {
+    await shikiLoadPromise;
+    return;
   }
 
-  await shikiMonacoThemePromise;
+  shikiLoadPromise = (async () => {
+    const [{ createHighlighterCore }, { createJavaScriptRegexEngine }, {
+      shikiToMonaco,
+    }] = await Promise.all([
+      import("@shikijs/core"),
+      import("@shikijs/engine-javascript"),
+      import("@shikijs/monaco"),
+    ]);
+
+    const themeLoader = THEME_LOADERS[initialTheme];
+    const highlighter = await createHighlighterCore({
+      themes: themeLoader
+        ? [await themeLoader()] as import("@shikijs/core").ThemeInput[]
+        : [],
+      langs: [],
+      engine: createJavaScriptRegexEngine(),
+    });
+
+    loadedThemes.add(initialTheme);
+    shikiToMonaco(highlighter, monaco);
+    shikiHighlighter = highlighter;
+  })().catch((error) => {
+    shikiLoadPromise = null;
+    throw error;
+  });
+
+  await shikiLoadPromise;
+}
+
+async function loadTheme(themeName: string): Promise<void> {
+  if (!shikiHighlighter || loadedThemes.has(themeName)) {
+    return;
+  }
+
+  const loader = THEME_LOADERS[themeName];
+  if (!loader) return;
+
+  try {
+    const theme = await loader();
+    await shikiHighlighter.loadTheme(
+      theme as unknown as import("@shikijs/core").ThemeInput,
+    );
+    loadedThemes.add(themeName);
+  } catch (error) {
+    console.error(`Failed to load theme ${themeName}:`, error);
+  }
 }
 
 function MountainIcon() {
@@ -490,8 +523,10 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     document.documentElement.style.colorScheme = resolved;
     if (monacoRef.current) {
       const themeName = getShikiThemeName(selectedThemePair.value, resolved);
-      monacoRef.current.editor.setTheme(themeName);
-      applyThemePalette(themeName);
+      void loadTheme(themeName).then(() => {
+        monacoRef.current?.editor.setTheme(themeName);
+        applyThemePalette(themeName);
+      });
     }
 
     void renderOutput(consoleText.value);
@@ -504,8 +539,10 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         selectedThemePair.value,
         darknessMode.value,
       );
-      monacoRef.current.editor.setTheme(themeName);
-      applyThemePalette(themeName);
+      void loadTheme(themeName).then(() => {
+        monacoRef.current?.editor.setTheme(themeName);
+        applyThemePalette(themeName);
+      });
     }
   }, [selectedThemePair.value]);
 
@@ -549,7 +586,6 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           return;
         }
 
-        await setupShikiThemes(monaco);
         monacoRef.current = monaco;
 
         monaco.languages.register({ id: "tla" });
@@ -557,6 +593,11 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         monaco.languages.setMonarchTokensProvider(
           "tla",
           TLAPlusMonarchLanguage,
+        );
+
+        const initialTheme = getShikiThemeName(
+          selectedThemePair.value,
+          darknessMode.value,
         );
 
         editor.current = monaco.editor.create(editorRef.current, {
@@ -579,12 +620,9 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           overviewRulerLanes: 0,
         });
 
-        monaco.editor.setTheme(
-          getShikiThemeName(selectedThemePair.value, darknessMode.value),
-        );
-        applyThemePalette(
-          getShikiThemeName(selectedThemePair.value, darknessMode.value),
-        );
+        await initShikiWithTheme(monaco, initialTheme);
+        monaco.editor.setTheme(initialTheme);
+        applyThemePalette(initialTheme);
 
         if (outputRef.current) {
           outputEditor.current = monaco.editor.create(outputRef.current, {
