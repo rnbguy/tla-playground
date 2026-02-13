@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "jsr:@std/assert@^1.0.15";
+import { assertEquals, assertMatch } from "@std/assert";
 import type { FreshContext } from "fresh";
 import type { State } from "../../utils.ts";
 import { handler } from "./verify.ts";

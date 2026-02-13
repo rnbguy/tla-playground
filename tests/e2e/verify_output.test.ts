@@ -1,4 +1,4 @@
-import { assertMatch } from "jsr:@std/assert@^1.0.15";
+import { assertMatch } from "@std/assert";
 
 Deno.test("e2e verify output contains Apalache description", async () => {
   const baseUrl = Deno.env.get("E2E_BASE_URL");
