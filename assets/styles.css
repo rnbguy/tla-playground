@@ -133,28 +133,6 @@ body {
   padding: 0;
 }
 
-.font-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.22rem;
-  border: none;
-  background: var(--app-surface-strong);
-  height: 1.62rem;
-  padding: 0 0.22rem;
-  min-width: 0;
-}
-
-.font-select {
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--app-fg);
-  font: inherit;
-  font-size: 0.74rem;
-  min-width: 5.4rem;
-  max-width: 8.2rem;
-}
-
 .verify-button {
   background: linear-gradient(
     135deg,
@@ -271,48 +249,6 @@ body {
   overflow: hidden;
 }
 
-.menu-wrap {
-  position: relative;
-  min-width: 0;
-  z-index: 60;
-}
-
-.menu-panel {
-  position: absolute;
-  top: calc(100% + 0.18rem);
-  right: 0;
-  min-width: 8rem;
-  max-width: min(48vw, 12rem);
-  max-height: min(45vh, 14rem);
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid color-mix(in srgb, var(--app-fg) 12%, transparent);
-  background: color-mix(in srgb, var(--app-surface) 96%, transparent);
-  z-index: 5000;
-}
-
-.menu-item {
-  border: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--app-fg) 10%, transparent);
-  background: transparent;
-  color: var(--app-fg);
-  text-align: left;
-  font: inherit;
-  font-size: 0.78rem;
-  padding: 0.34rem 0.45rem;
-  cursor: pointer;
-}
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-item:hover,
-.menu-item.active {
-  background: color-mix(in srgb, var(--app-accent) 16%, transparent);
-}
-
 .footer-link {
   color: inherit;
   text-decoration: none;
@@ -363,21 +299,11 @@ body {
     flex-wrap: nowrap;
   }
 
-  .font-select {
-    max-width: 6.4rem;
-  }
-
   .playground-footer {
     font-size: 0.8rem;
     gap: 0.28rem;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
-  }
-
-  .menu-panel {
-    min-width: 7rem;
-    right: auto;
-    left: 0;
   }
 }

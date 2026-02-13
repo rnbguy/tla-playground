@@ -14,6 +14,7 @@ import githubLight from "@shikijs/themes/github-light";
 import githubDark from "@shikijs/themes/github-dark";
 
 import { TLAPlusMonarchLanguage } from "../utils/tlaMonarch.ts";
+import { MONACO_VERSION } from "../utils/constants.ts";
 
 interface PlaygroundProps {
   tla: string;
@@ -98,7 +99,6 @@ type MonacoNamespace = {
   };
 };
 
-const MONACO_VERSION = "0.55.1";
 const MONACO_ESM = `https://esm.sh/monaco-editor@${MONACO_VERSION}`;
 
 let monacoLoadPromise: Promise<MonacoNamespace> | null = null;

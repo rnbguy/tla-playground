@@ -1,6 +1,5 @@
 import { PageProps } from "fresh";
-
-const MONACO_VERSION = "0.55.1";
+import { MONACO_VERSION } from "../utils/constants.ts";
 
 export default function App({ Component }: PageProps) {
   return (
