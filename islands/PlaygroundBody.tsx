@@ -546,13 +546,21 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     }
   }, [selectedThemePair.value]);
 
+  const fontFamily = FONT_FAMILY_MAP[selectedFont.value];
   useEffect(() => {
-    const fontFamily = FONT_FAMILY_MAP[selectedFont.value];
     document.documentElement.style.setProperty("--code-font", fontFamily);
     editor.current?.updateOptions({ fontFamily });
     outputEditor.current?.updateOptions({ fontFamily });
     localStorage.setItem(FONT_STORAGE_KEY, selectedFont.value);
-  }, [selectedFont.value]);
+  }, [selectedFont.value, fontFamily]);
+
+  useEffect(() => {
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(() => loadMonaco(), { timeout: 2000 });
+    } else {
+      setTimeout(() => loadMonaco(), 100);
+    }
+  }, []);
 
   const toggleTheme = () => {
     darknessMode.value = darknessMode.value === "dark" ? "light" : "dark";
