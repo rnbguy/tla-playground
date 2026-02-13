@@ -171,7 +171,7 @@ type MonacoNamespace = {
   };
 };
 
-const MONACO_VERSION = "0.52.0";
+const MONACO_VERSION = "0.55.1";
 const MONACO_ESM = `https://esm.sh/monaco-editor@${MONACO_VERSION}`;
 const MONACO_CSS =
   `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/min/vs/editor/editor.main.css`;
