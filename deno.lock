@@ -38,10 +38,6 @@
     "npm:@babel/core@^7.28.0": "7.29.0",
     "npm:@babel/preset-react@^7.27.1": "7.28.5_@babel+core@7.29.0",
     "npm:@fontsource/fira-code@*": "5.2.7",
-    "npm:@fontsource/ibm-plex-mono@*": "5.2.7",
-    "npm:@fontsource/inconsolata@*": "5.2.8",
-    "npm:@fontsource/iosevka@*": "5.2.5",
-    "npm:@fontsource/jetbrains-mono@*": "5.2.8",
     "npm:@grpc/grpc-js@1.12.6": "1.12.6",
     "npm:@grpc/proto-loader@0.8": "0.8.0",
     "npm:@mjackson/node-fetch-server@0.7": "0.7.0",
@@ -665,18 +661,6 @@
     },
     "@fontsource/fira-code@5.2.7": {
       "integrity": "sha512-tnB9NNund9TwIym8/7DMJe573nlPEQb+fKUV5GL8TBYXjIhDvL0D7mgmNVNQUPhXp+R7RylQeiBdkA4EbOHPGQ=="
-    },
-    "@fontsource/ibm-plex-mono@5.2.7": {
-      "integrity": "sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w=="
-    },
-    "@fontsource/inconsolata@5.2.8": {
-      "integrity": "sha512-lIZW+WOZYpUH91g9r6rYYhfTmptF3YPPM54ZOs8IYVeeL4SeiAu4tfj7mdr8llYEq31DLYgi6JtGIJa192gB0Q=="
-    },
-    "@fontsource/iosevka@5.2.5": {
-      "integrity": "sha512-Zv/UHJodDug1LcnWv2u2+GPp3oWP3U6Xp16cJOsqqZQNsCu8sA/ttT331N0NypxBZ+7c8szlSRlYDcy9liZ8pw=="
-    },
-    "@fontsource/jetbrains-mono@5.2.8": {
-      "integrity": "sha512-6w8/SG4kqvIMu7xd7wt6x3idn1Qux3p9N62s6G3rfldOUYHpWcc2FKrqf+Vo44jRvqWj2oAtTHrZXEP23oSKwQ=="
     },
     "@grpc/grpc-js@1.12.6": {
       "integrity": "sha512-JXUj6PI0oqqzTGvKtzOkxtpsyPRNsrmhh41TtIz/zEB6J+AUiZZ0dxWzcMwO9Ns5rmSPuMdghlTbUuqIM48d3Q==",
@@ -1788,10 +1772,6 @@
       "jsr:@std/tar@~0.1.4",
       "jsr:@std/yaml@^1.0.5",
       "npm:@fontsource/fira-code@*",
-      "npm:@fontsource/ibm-plex-mono@*",
-      "npm:@fontsource/inconsolata@*",
-      "npm:@fontsource/iosevka@*",
-      "npm:@fontsource/jetbrains-mono@*",
       "npm:@grpc/grpc-js@1.12.6",
       "npm:@grpc/proto-loader@0.8",
       "npm:@preact/signals@^2.7.1",

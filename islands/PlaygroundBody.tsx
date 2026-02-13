@@ -1,11 +1,17 @@
 import { useEffect, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import * as yaml from "@std/yaml";
-import { Moon, Palette, Play, Sun, Type } from "lucide-preact";
+import { Moon, Play, Sun } from "lucide-preact";
 import IconBrandDeno from "@tabler/icons-preact/IconBrandDeno.mjs";
 import IconBrandGithub from "@tabler/icons-preact/IconBrandGithub.mjs";
 import IconLemon from "@tabler/icons-preact/IconLemon.mjs";
 import IconMountain from "@tabler/icons-preact/IconMountain.mjs";
+
+import { createHighlighterCore } from "@shikijs/core";
+import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
+import { shikiToMonaco } from "@shikijs/monaco";
+import githubLight from "@shikijs/themes/github-light";
+import githubDark from "@shikijs/themes/github-dark";
 
 import { TLAPlusMonarchLanguage } from "../utils/tlaMonarch.ts";
 
@@ -19,92 +25,13 @@ interface PlaygroundProps {
 type VerifyResponse = Record<string, unknown>;
 
 type ResolvedTheme = "light" | "dark";
-type ThemePairKey =
-  | "vitesse"
-  | "github"
-  | "night-owl"
-  | "rose-pine"
-  | "catppuccin"
-  | "solarized"
-  | "plus"
-  | "one"
-  | "gruvbox"
-  | "kanagawa";
 type DarknessMode = "dark" | "light";
 
-const FONT_STORAGE_KEY = "playground-font";
-const THEME_PAIR_STORAGE_KEY = "playground-theme-pair";
 const DARKNESS_MODE_STORAGE_KEY = "playground-darkness";
 
-type CodeFont = "fira" | "jetbrains" | "ibm" | "iosevka" | "inconsolata";
-
-const FONT_FAMILY_MAP: Record<CodeFont, string> = {
-  fira: "Fira Code, monospace",
-  jetbrains: "JetBrains Mono, monospace",
-  ibm: "IBM Plex Mono, monospace",
-  iosevka: "Iosevka, monospace",
-  inconsolata: "Inconsolata, monospace",
-};
-
-const THEME_PAIR_MAP: Record<ThemePairKey, { light: string; dark: string }> = {
-  vitesse: { light: "vitesse-light", dark: "vitesse-dark" },
-  github: { light: "github-light", dark: "github-dark" },
-  "night-owl": { light: "night-owl-light", dark: "night-owl" },
-  "rose-pine": { light: "rose-pine-dawn", dark: "rose-pine-moon" },
-  catppuccin: { light: "catppuccin-latte", dark: "catppuccin-mocha" },
-  solarized: { light: "solarized-light", dark: "solarized-dark" },
-  plus: { light: "light-plus", dark: "dark-plus" },
-  one: { light: "one-light", dark: "one-dark-pro" },
-  gruvbox: { light: "gruvbox-light-medium", dark: "gruvbox-dark-medium" },
-  kanagawa: { light: "kanagawa-lotus", dark: "kanagawa-wave" },
-};
-
-const THEME_PAIR_OPTIONS: Array<{ key: ThemePairKey; label: string }> = [
-  { key: "vitesse", label: "Vitesse" },
-  { key: "github", label: "GitHub" },
-  { key: "night-owl", label: "Night Owl" },
-  { key: "rose-pine", label: "Rose Pine" },
-  { key: "catppuccin", label: "Catppuccin" },
-  { key: "solarized", label: "Solarized" },
-  { key: "plus", label: "VS Code Plus" },
-  { key: "one", label: "One Dark Pro" },
-  { key: "gruvbox", label: "Gruvbox" },
-  { key: "kanagawa", label: "Kanagawa" },
-];
-
-function getShikiThemeName(
-  pair: ThemePairKey,
-  mode: ResolvedTheme,
-): string {
-  const selectedPair = THEME_PAIR_MAP[pair];
-  return mode === "dark" ? selectedPair.dark : selectedPair.light;
-}
-
-function readStoredCodeFont(): CodeFont {
-  const stored = localStorage.getItem(FONT_STORAGE_KEY);
-  if (
-    stored === "fira" || stored === "jetbrains" || stored === "ibm" ||
-    stored === "iosevka" || stored === "inconsolata"
-  ) {
-    return stored;
-  }
-
-  return "iosevka";
-}
-
-function readStoredThemePair(): ThemePairKey {
-  const stored = localStorage.getItem(THEME_PAIR_STORAGE_KEY);
-  if (
-    stored === "vitesse" || stored === "github" || stored === "night-owl" ||
-    stored === "rose-pine" || stored === "catppuccin" ||
-    stored === "solarized" || stored === "plus" || stored === "one" ||
-    stored === "gruvbox" || stored === "kanagawa"
-  ) {
-    return stored;
-  }
-
-  return "vitesse";
-}
+const CODE_FONT = "Fira Code, monospace";
+const GITHUB_THEME_LIGHT = "github-light";
+const GITHUB_THEME_DARK = "github-dark";
 
 function readStoredDarknessMode(): DarknessMode | null {
   const stored = localStorage.getItem(DARKNESS_MODE_STORAGE_KEY);
@@ -173,48 +100,14 @@ type MonacoNamespace = {
 
 const MONACO_VERSION = "0.55.1";
 const MONACO_ESM = `https://esm.sh/monaco-editor@${MONACO_VERSION}`;
-const MONACO_CSS =
-  `https://cdn.jsdelivr.net/npm/monaco-editor@${MONACO_VERSION}/min/vs/editor/editor.main.css`;
 
 let monacoLoadPromise: Promise<MonacoNamespace> | null = null;
 let shikiHighlighter: import("@shikijs/core").HighlighterCore | null = null;
 let shikiLoadPromise: Promise<void> | null = null;
 
-const THEME_LOADERS: Record<string, () => Promise<unknown>> = {
-  "vitesse-light": () => import("@shikijs/themes/vitesse-light"),
-  "vitesse-dark": () => import("@shikijs/themes/vitesse-dark"),
-  "github-light": () => import("@shikijs/themes/github-light"),
-  "github-dark": () => import("@shikijs/themes/github-dark"),
-  "night-owl-light": () => import("@shikijs/themes/night-owl-light"),
-  "night-owl": () => import("@shikijs/themes/night-owl"),
-  "rose-pine-dawn": () => import("@shikijs/themes/rose-pine-dawn"),
-  "rose-pine-moon": () => import("@shikijs/themes/rose-pine-moon"),
-  "catppuccin-latte": () => import("@shikijs/themes/catppuccin-latte"),
-  "catppuccin-mocha": () => import("@shikijs/themes/catppuccin-mocha"),
-  "solarized-light": () => import("@shikijs/themes/solarized-light"),
-  "solarized-dark": () => import("@shikijs/themes/solarized-dark"),
-  "light-plus": () => import("@shikijs/themes/light-plus"),
-  "dark-plus": () => import("@shikijs/themes/dark-plus"),
-  "one-light": () => import("@shikijs/themes/one-light"),
-  "one-dark-pro": () => import("@shikijs/themes/one-dark-pro"),
-  "gruvbox-light-medium": () => import("@shikijs/themes/gruvbox-light-medium"),
-  "gruvbox-dark-medium": () => import("@shikijs/themes/gruvbox-dark-medium"),
-  "kanagawa-lotus": () => import("@shikijs/themes/kanagawa-lotus"),
-  "kanagawa-wave": () => import("@shikijs/themes/kanagawa-wave"),
-};
-
-const loadedThemes = new Set<string>();
-
 function loadMonaco(): Promise<MonacoNamespace> {
   if (!monacoLoadPromise) {
     monacoLoadPromise = (async () => {
-      if (!document.querySelector(`link[href="${MONACO_CSS}"]`)) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = MONACO_CSS;
-        document.head.appendChild(link);
-      }
-
       (globalThis as Record<string, unknown>).MonacoEnvironment = {
         getWorker() {
           const blob = new Blob(
@@ -235,34 +128,19 @@ function loadMonaco(): Promise<MonacoNamespace> {
   return monacoLoadPromise;
 }
 
-async function initShikiWithTheme(
-  monaco: MonacoNamespace,
-  initialTheme: string,
-): Promise<void> {
+async function initShikiWithTheme(monaco: MonacoNamespace): Promise<void> {
   if (shikiLoadPromise) {
     await shikiLoadPromise;
     return;
   }
 
   shikiLoadPromise = (async () => {
-    const [{ createHighlighterCore }, { createJavaScriptRegexEngine }, {
-      shikiToMonaco,
-    }] = await Promise.all([
-      import("@shikijs/core"),
-      import("@shikijs/engine-javascript"),
-      import("@shikijs/monaco"),
-    ]);
-
-    const themeLoader = THEME_LOADERS[initialTheme];
     const highlighter = await createHighlighterCore({
-      themes: themeLoader
-        ? [await themeLoader()] as import("@shikijs/core").ThemeInput[]
-        : [],
+      themes: [githubLight, githubDark],
       langs: [],
       engine: createJavaScriptRegexEngine(),
     });
 
-    loadedThemes.add(initialTheme);
     shikiToMonaco(highlighter, monaco);
     shikiHighlighter = highlighter;
   })().catch((error) => {
@@ -271,49 +149,6 @@ async function initShikiWithTheme(
   });
 
   await shikiLoadPromise;
-}
-
-async function loadTheme(themeName: string): Promise<void> {
-  if (!shikiHighlighter || loadedThemes.has(themeName)) {
-    return;
-  }
-
-  const loader = THEME_LOADERS[themeName];
-  if (!loader) return;
-
-  try {
-    const theme = await loader();
-    await shikiHighlighter.loadTheme(
-      theme as unknown as import("@shikijs/core").ThemeInput,
-    );
-    loadedThemes.add(themeName);
-  } catch (error) {
-    console.error(`Failed to load theme ${themeName}:`, error);
-  }
-}
-
-function MountainIcon() {
-  return <IconMountain aria-hidden="true" class="icon-stroke" size={16} />;
-}
-
-function CitrusIcon() {
-  return <IconLemon aria-hidden="true" class="icon-stroke" size={16} />;
-}
-
-function GithubIcon() {
-  return <IconBrandGithub aria-hidden="true" class="icon-stroke" size={16} />;
-}
-
-function DenoIcon() {
-  return <IconBrandDeno aria-hidden="true" class="icon-stroke" size={16} />;
-}
-
-function SunIcon() {
-  return <Sun aria-hidden="true" class="icon-stroke" size={16} />;
-}
-
-function MoonIcon() {
-  return <Moon aria-hidden="true" class="icon-stroke" size={16} />;
 }
 
 type ThemePalette = {
@@ -483,12 +318,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
   const loadingText = useSignal("");
   const consoleText = useSignal(props.out);
   const errorText = useSignal("");
-  const selectedThemePair = useSignal<ThemePairKey>("vitesse");
   const darknessMode = useSignal<DarknessMode>("light");
-  const selectedFont = useSignal<CodeFont>("iosevka");
-  const fontMenuOpen = useSignal(false);
-  const themeMenuOpen = useSignal(false);
-
   const selectedInv = useSignal(props.inv);
   const allInvs = useSignal<string[]>(props.invs);
 
@@ -504,8 +334,6 @@ export default function PlaygroundBody(props: PlaygroundProps) {
 
   useEffect(() => {
     const mediaQuery = globalThis.matchMedia("(prefers-color-scheme: dark)");
-    selectedFont.value = readStoredCodeFont();
-    selectedThemePair.value = readStoredThemePair();
 
     const stored = readStoredDarknessMode();
     if (stored) {
@@ -522,44 +350,24 @@ export default function PlaygroundBody(props: PlaygroundProps) {
     document.documentElement.setAttribute("data-theme", resolved);
     document.documentElement.style.colorScheme = resolved;
     if (monacoRef.current) {
-      const themeName = getShikiThemeName(selectedThemePair.value, resolved);
-      void loadTheme(themeName).then(() => {
-        monacoRef.current?.editor.setTheme(themeName);
-        applyThemePalette(themeName);
-      });
+      const themeName = resolved === "dark"
+        ? GITHUB_THEME_DARK
+        : GITHUB_THEME_LIGHT;
+      monacoRef.current.editor.setTheme(themeName);
+      applyThemePalette(themeName);
     }
 
     void renderOutput(consoleText.value);
   }, [darknessMode.value]);
 
   useEffect(() => {
-    localStorage.setItem(THEME_PAIR_STORAGE_KEY, selectedThemePair.value);
-    if (monacoRef.current) {
-      const themeName = getShikiThemeName(
-        selectedThemePair.value,
-        darknessMode.value,
-      );
-      void loadTheme(themeName).then(() => {
-        monacoRef.current?.editor.setTheme(themeName);
-        applyThemePalette(themeName);
-      });
-    }
-  }, [selectedThemePair.value]);
-
-  const fontFamily = FONT_FAMILY_MAP[selectedFont.value];
-  useEffect(() => {
-    document.documentElement.style.setProperty("--code-font", fontFamily);
-    editor.current?.updateOptions({ fontFamily });
-    outputEditor.current?.updateOptions({ fontFamily });
-    localStorage.setItem(FONT_STORAGE_KEY, selectedFont.value);
-  }, [selectedFont.value, fontFamily]);
+    document.documentElement.style.setProperty("--code-font", CODE_FONT);
+    editor.current?.updateOptions({ fontFamily: CODE_FONT });
+    outputEditor.current?.updateOptions({ fontFamily: CODE_FONT });
+  }, []);
 
   useEffect(() => {
-    if (typeof requestIdleCallback !== "undefined") {
-      requestIdleCallback(() => loadMonaco(), { timeout: 2000 });
-    } else {
-      setTimeout(() => loadMonaco(), 100);
-    }
+    void loadMonaco();
   }, []);
 
   const toggleTheme = () => {
@@ -603,17 +411,16 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           TLAPlusMonarchLanguage,
         );
 
-        const initialTheme = getShikiThemeName(
-          selectedThemePair.value,
-          darknessMode.value,
-        );
+        const initialTheme = darknessMode.value === "dark"
+          ? GITHUB_THEME_DARK
+          : GITHUB_THEME_LIGHT;
 
         editor.current = monaco.editor.create(editorRef.current, {
           language: "tla",
           readOnly: false,
           automaticLayout: true,
           contextmenu: true,
-          fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+          fontFamily: CODE_FONT,
           fontSize: 14,
           lineHeight: 20,
           lineNumbersMinChars: 2,
@@ -628,7 +435,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           overviewRulerLanes: 0,
         });
 
-        await initShikiWithTheme(monaco, initialTheme);
+        await initShikiWithTheme(monaco);
         monaco.editor.setTheme(initialTheme);
         applyThemePalette(initialTheme);
 
@@ -639,7 +446,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             domReadOnly: true,
             automaticLayout: true,
             contextmenu: false,
-            fontFamily: FONT_FAMILY_MAP[selectedFont.value],
+            fontFamily: CODE_FONT,
             fontSize: 13,
             lineHeight: 20,
             lineNumbersMinChars: 2,
@@ -928,88 +735,6 @@ export default function PlaygroundBody(props: PlaygroundProps) {
         </div>
 
         <div class="toolbar-right">
-          <div class="menu-wrap">
-            <button
-              type="button"
-              class="theme-button icon-button"
-              title="Code font"
-              aria-label="Code font"
-              onClick={() => {
-                fontMenuOpen.value = !fontMenuOpen.value;
-                themeMenuOpen.value = false;
-              }}
-            >
-              <Type aria-hidden="true" class="icon-stroke" size={15} />
-            </button>
-            {fontMenuOpen.value && (
-              <div class="menu-panel" role="menu" aria-label="Font menu">
-                {([
-                  "fira",
-                  "jetbrains",
-                  "ibm",
-                  "iosevka",
-                  "inconsolata",
-                ] as CodeFont[]).map((font) => (
-                  <button
-                    key={font}
-                    type="button"
-                    class={`menu-item ${
-                      selectedFont.value === font ? "active" : ""
-                    }`}
-                    onClick={() => {
-                      selectedFont.value = font;
-                      fontMenuOpen.value = false;
-                    }}
-                  >
-                    {font === "ibm"
-                      ? "IBM Plex"
-                      : font === "jetbrains"
-                      ? "JetBrains"
-                      : font === "inconsolata"
-                      ? "Inconsolata"
-                      : font === "iosevka"
-                      ? "Iosevka"
-                      : "Fira"}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div class="menu-wrap">
-            <button
-              type="button"
-              class="theme-button icon-button"
-              title="Color theme"
-              aria-label="Color theme"
-              onClick={() => {
-                themeMenuOpen.value = !themeMenuOpen.value;
-                fontMenuOpen.value = false;
-              }}
-            >
-              <Palette aria-hidden="true" class="icon-stroke" size={15} />
-            </button>
-            {themeMenuOpen.value && (
-              <div class="menu-panel" role="menu" aria-label="Theme menu">
-                {THEME_PAIR_OPTIONS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    class={`menu-item ${
-                      selectedThemePair.value === key ? "active" : ""
-                    }`}
-                    onClick={() => {
-                      selectedThemePair.value = key;
-                      themeMenuOpen.value = false;
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <button
             type="button"
             class="theme-button icon-button"
@@ -1017,7 +742,9 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             title="Toggle theme"
             aria-label="Toggle darkness mode"
           >
-            {darknessMode.value === "dark" ? <MoonIcon /> : <SunIcon />}
+            {darknessMode.value === "dark"
+              ? <Moon size={20} />
+              : <Sun size={20} />}
           </button>
         </div>
       </header>
@@ -1044,7 +771,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             target="_blank"
           >
             <span>Apalache</span>
-            <MountainIcon />
+            <IconMountain size={16} />
           </a>
           <span>,</span>
           <a
@@ -1054,7 +781,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             target="_blank"
           >
             <span>Fresh</span>
-            <CitrusIcon />
+            <IconLemon size={16} />
           </a>
           <span>,</span>
           <a
@@ -1064,7 +791,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
             target="_blank"
           >
             <span>Deno</span>
-            <DenoIcon />
+            <IconBrandDeno size={16} />
           </a>
         </div>
         <a
@@ -1074,7 +801,7 @@ export default function PlaygroundBody(props: PlaygroundProps) {
           target="_blank"
         >
           <span>View Source</span>
-          <GithubIcon />
+          <IconBrandGithub size={16} />
         </a>
       </footer>
     </div>
