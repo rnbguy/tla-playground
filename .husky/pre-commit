@@ -1,0 +1,8 @@
+# unicode guard: reject non-ASCII in tracked source files
+if git diff --cached --name-only --diff-filter=ACM | xargs grep -Prn '[^\x00-\x7F]' 2>/dev/null; then
+  echo "error: non-ASCII characters found in staged files"
+  exit 1
+fi
+
+deno fmt --check
+deno lint

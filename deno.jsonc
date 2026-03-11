@@ -5,7 +5,8 @@
     "build": "vite build",
     "start": "deno serve --allow-net --allow-env --allow-read _fresh/server.js",
     "test": "deno test --allow-env --allow-net --allow-read",
-    "update": "deno run -A -r jsr:@fresh/update ."
+    "update": "deno run -A -r jsr:@fresh/update .",
+    "prepare": "deno run -A npm:husky"
   },
   "compilerOptions": {
     "jsx": "precompile",
