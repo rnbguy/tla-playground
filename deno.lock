@@ -38,8 +38,10 @@
     "npm:@babel/core@^7.28.0": "7.29.0",
     "npm:@babel/preset-react@^7.27.1": "7.28.5_@babel+core@7.29.0",
     "npm:@fontsource/fira-code@*": "5.2.7",
-    "npm:@grpc/grpc-js@1.12.6": "1.12.6",
+    "npm:@grpc/grpc-js@1.14.3": "1.14.3",
+    "npm:@grpc/grpc-js@^1.14.3": "1.14.3",
     "npm:@grpc/proto-loader@0.8": "0.8.0",
+    "npm:@grpc/proto-loader@0.8.0": "0.8.0",
     "npm:@mjackson/node-fetch-server@0.7": "0.7.0",
     "npm:@opentelemetry/api@^1.9.0": "1.9.0",
     "npm:@preact/signals@^2.2.1": "2.7.1_preact@10.28.3",
@@ -60,7 +62,8 @@
     "npm:preact@10.28.3": "10.28.3",
     "npm:preact@^10.27.0": "10.28.3",
     "npm:preact@^10.27.2": "10.28.3",
-    "npm:protobufjs@7.5.4": "7.5.4",
+    "npm:protobufjs@8": "8.0.0",
+    "npm:protobufjs@8.0.0": "8.0.0",
     "npm:rollup@^4.50.0": "4.57.1",
     "npm:tailwindcss@^4.1.13": "4.1.18",
     "npm:vite@^7.1.4": "7.3.1_picomatch@4.0.3",
@@ -662,29 +665,19 @@
     "@fontsource/fira-code@5.2.7": {
       "integrity": "sha512-tnB9NNund9TwIym8/7DMJe573nlPEQb+fKUV5GL8TBYXjIhDvL0D7mgmNVNQUPhXp+R7RylQeiBdkA4EbOHPGQ=="
     },
-    "@grpc/grpc-js@1.12.6": {
-      "integrity": "sha512-JXUj6PI0oqqzTGvKtzOkxtpsyPRNsrmhh41TtIz/zEB6J+AUiZZ0dxWzcMwO9Ns5rmSPuMdghlTbUuqIM48d3Q==",
+    "@grpc/grpc-js@1.14.3": {
+      "integrity": "sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==",
       "dependencies": [
-        "@grpc/proto-loader@0.7.15",
+        "@grpc/proto-loader",
         "@js-sdsl/ordered-map"
       ]
-    },
-    "@grpc/proto-loader@0.7.15": {
-      "integrity": "sha512-tMXdRCfYVixjuFK+Hk0Q1s38gV9zDiDJfWL3h1rv4Qc39oILCu1TRTDt7+fGUI8K4G1Fj125Hx/ru3azECWTyQ==",
-      "dependencies": [
-        "lodash.camelcase",
-        "long",
-        "protobufjs",
-        "yargs"
-      ],
-      "bin": true
     },
     "@grpc/proto-loader@0.8.0": {
       "integrity": "sha512-rc1hOQtjIWGxcxpb9aHAfLpIctjEnsDehj0DAiVfBlmT84uvR0uUtN2hEi/ecvWVjXUGf5qPF4qEgiLOx1YIMQ==",
       "dependencies": [
         "lodash.camelcase",
         "long",
-        "protobufjs",
+        "protobufjs@7.5.4",
         "yargs"
       ],
       "bin": true
@@ -1556,6 +1549,24 @@
       ],
       "scripts": true
     },
+    "protobufjs@8.0.0": {
+      "integrity": "sha512-jx6+sE9h/UryaCZhsJWbJtTEy47yXoGNYI4z8ZaRncM0zBKeRqjO2JEcOUYwrYGb1WLhXM1FfMzW3annvFv0rw==",
+      "dependencies": [
+        "@protobufjs/aspromise",
+        "@protobufjs/base64",
+        "@protobufjs/codegen",
+        "@protobufjs/eventemitter",
+        "@protobufjs/fetch",
+        "@protobufjs/float",
+        "@protobufjs/inquire",
+        "@protobufjs/path",
+        "@protobufjs/pool",
+        "@protobufjs/utf8",
+        "@types/node",
+        "long"
+      ],
+      "scripts": true
+    },
     "regex-recursion@6.0.2": {
       "integrity": "sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==",
       "dependencies": [
@@ -1772,7 +1783,7 @@
       "jsr:@std/tar@~0.1.4",
       "jsr:@std/yaml@^1.0.5",
       "npm:@fontsource/fira-code@*",
-      "npm:@grpc/grpc-js@1.12.6",
+      "npm:@grpc/grpc-js@^1.14.3",
       "npm:@grpc/proto-loader@0.8",
       "npm:@preact/signals@^2.7.1",
       "npm:@shikijs/core@^3.22.0",
@@ -1784,7 +1795,7 @@
       "npm:lucide-preact@0.563",
       "npm:monaco-editor@0.55.1",
       "npm:preact@10.28.3",
-      "npm:protobufjs@7.5.4",
+      "npm:protobufjs@8",
       "npm:tailwindcss@^4.1.13",
       "npm:vite@^7.3.1"
     ]

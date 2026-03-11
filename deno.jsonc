@@ -30,11 +30,8 @@
   },
   "nodeModulesDir": "auto",
   "imports": {
-    // don't update @grpc/grpc-js
-    // https://github.com/denoland/deno/issues/26907
-    "@grpc/grpc-js": "npm:@grpc/grpc-js@1.12.6",
-    // don't update protobufjs to 8.x - breaks gRPC reflection
-    "protobufjs": "npm:protobufjs@7.5.4",
+    "@grpc/grpc-js": "npm:@grpc/grpc-js@^1.14.3",
+    "protobufjs": "npm:protobufjs@^8.0.0",
     "@grpc/proto-loader": "npm:@grpc/proto-loader@^0.8.0",
     "@fresh/plugin-vite": "jsr:@fresh/plugin-vite@^1.0.8",
     "@preact/signals": "npm:@preact/signals@^2.7.1",
