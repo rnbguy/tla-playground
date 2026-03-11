@@ -55,5 +55,6 @@
     "monaco-editor/": "npm:/monaco-editor@0.55.1/"
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
-  "exclude": ["**/_fresh/*"]
+  "exclude": ["**/_fresh/*"],
+  "allowScripts": ["npm:protobufjs"]
 }
