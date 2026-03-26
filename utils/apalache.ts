@@ -1,13 +1,9 @@
 import { UntarStream } from "@std/tar";
 import { type TarStreamEntry } from "@std/tar/untar-stream";
 import { cache } from "cache/mod.ts";
-import { default as protobufDescriptor } from "protobufjs/ext/descriptor/index.js";
 import * as grpc from "@grpc/grpc-js";
 import * as proto from "@grpc/proto-loader";
-import { getReflectionClient, ServerReflectionResponse } from "./reflection.ts";
-
-// const REFLECTION_PROTO_URL =
-//   "https://github.com/grpc/grpc/raw/master/src/proto/grpc/reflection/v1alpha/reflection.proto";
+import { Client as GrpcReflectionClient } from "grpc-reflection-js";
 
 const GH_REPO = "informalsystems/apalache";
 const TGZ_JAR_NAME = "apalache.jar";
@@ -133,49 +129,17 @@ export class Apalache {
 
     const conn_opt = { hostname: hostname || "localhost", port: port };
 
-    const reflectionClient = await getReflectionClient(conn_opt);
-
-    // Query reflection endpoint (retry if server is unreachable)
-    const apalacheProtoDef = await new Promise<
-      ServerReflectionResponse
-    >(
-      (resolve, reject) => {
-        const call = reflectionClient.ServerReflectionInfo();
-        call.on("data", (r: ServerReflectionResponse) => {
-          call.end();
-          resolve(r);
-        });
-        call.on("error", (e: grpc.StatusObject) => reject(e));
-
-        call.write({ file_containing_symbol: APALACHE_SERVICE_NAME });
-      },
-    ).then(
-      (protoDefResponse: ServerReflectionResponse): proto.PackageDefinition => {
-        if ("error_response" in protoDefResponse) {
-          throw new Error("Failed to resolve Apalache reflection descriptor");
-        } else {
-          // Decode reflection response to FileDescriptorProto
-          const fileDescriptorProtos = protoDefResponse.file_descriptor_response
-            .file_descriptor_proto.map(
-              (bytes) =>
-                protobufDescriptor.FileDescriptorProto.decode(
-                  bytes,
-                ) as protobufDescriptor.IFileDescriptorProto,
-            );
-
-          // Use proto-loader to load the FileDescriptorProto wrapped in a FileDescriptorSet
-          const packageDefinition = proto.loadFileDescriptorSetFromObject(
-            { file: fileDescriptorProtos },
-            grpcStubOptions,
-          );
-
-          return packageDefinition;
-        }
-      },
+    const reflectionClient = new GrpcReflectionClient(
+      `${conn_opt.hostname}:${conn_opt.port}`,
+      grpc.credentials.createInsecure(),
     );
 
+    const root = await reflectionClient.fileContainingSymbol(
+      APALACHE_SERVICE_NAME,
+    );
+    const packageDefinition = proto.fromJSON(root.toJSON(), grpcStubOptions);
     const apalacheService = grpc.loadPackageDefinition(
-      apalacheProtoDef,
+      packageDefinition,
     ) as unknown as ShaiPkg;
 
     this.client = new apalacheService.shai.cmdExecutor.CmdExecutor(
